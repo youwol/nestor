@@ -18,20 +18,56 @@ runs:
   steps:
     - name: Audit dependencies
       id: yarn_audit
-      if: "!contains(inputs.skip, 'audit')"
-      run: yarn audit
-      shell: sh
-
-    - name: Check code formatting with yarn prettier
-      id: yarn_prettier
-      if: "!contains(inputs.skip, 'prettier')"
-      run: yarn prettier --check .
+      env:
+        job_id: ${{ github.job }}
+      run: |
+        # Yarn audit
+        if yarn -s audit --json > dist/audit.json; then
+          echo "::set-ouput name=result::ok"
+        else
+          title="Security issues in dependencies for job '${job_id}'"
+          echo "::group::Yarn auditing report"
+          yarn audit || true
+          echo "::nogroup::"
+          echo "::warning title=${title}::See 'Yarn auditing report' in logs and audit.json for details"
+          echo "::set-ouput name=result::ko"
+        fi
       shell: sh
 
     - name: Check code quality with yarn eslint
       id: yarn_eslint
-      if: "!contains(inputs.skip, 'eslint')"
-      run: yarn eslint --format html --output-file lint.html .
+      env:
+        job_id: ${{ github.job }}
+      run: |
+        # Yarn eslint
+        if yarn -s eslint --format html --output-file dist/lint.html . ; then
+          echo "::set-output name=result::ok"
+        else
+          title="Code-quality concerns for job '${job_id}'"
+          echo "::warning title=${title}::See logs and lint.html for details"
+          echo "::set-ouput name=result::ko"
+        fi
+      shell: sh
+
+    - name: Check code formatting with yarn prettier
+      id: yarn_prettier
+      env:
+        job_id: ${{ github.job }}
+      run: |
+        # Yarn prettier
+        echo "::group::Yarn prettier logs"
+        if files=$(yarn -s prettier --list-different .) ; then
+          echo "::nogroup::"
+          echo "::set-output name=result::ok"
+        else
+          echo "::nogroup::"
+          title="Malformatted code source for job '${job_id}'"
+          echo "::warning title=${title}::See 'Yarn prettier logs' and/or annotations for details"
+          for file in ${files} ; do
+            echo "::warning file=${file},title=${title}::Mal-formatted file"
+          done
+          echo "::set-ouput name=result::ko"
+        fi
       shell: sh
 
     - name: Prepare site artefacts
@@ -41,7 +77,8 @@ runs:
         ### Prepare site artefacts
         site_dir="site"
         mkdir -p "${site_dir}"
-        mv lint.html "${site_dir}/"
+        mv dist/audit.json "${site_dir}/"
+        mv dist/lint.html "${site_dir}/"
         echo "::set-output name=dir::$(realpath ${site_dir})"
       shell: sh
 
@@ -53,3 +90,54 @@ runs:
         name: ${{ inputs.archive }}
         path: |
           ${{ steps.prepare_site_artefacts.outputs.dir }}
+
+    - name: Summary
+      id: summary
+      env:
+        job_id: ${{ github.job }}
+        audit: ${{ steps.yarn_audit.outputs.result }}
+        skip_audit: ${{ contains(inputs.skip, 'audit') }}
+        eslint: ${{ steps.yarn_eslint.outputs.result }}
+        skip_eslint: ${{ contains(inputs.skip, 'eslint') }}
+        prettier: ${{ steps.yarn_prettier.outputs.result }}
+        skip_prettier: ${{ contains(inputs.skip, 'prettier') }}
+      run: |
+        # Summary
+        title="Static analysis for job '${job_id}'"
+        ignored="false"
+        global_failure="false"
+        if [ ${audit} != 'ok' ]; then
+          if ${skip_audit}; then
+            echo "::warning title=${title}::Ignoring dependencies audit failure"
+            ignored="true"
+          else
+            echo "::error title=${title}::Static analysis failed because of dependencies security issues"
+            global_failure="true"
+          fi
+        fi
+        if [ ${eslint} != 'ok' ]; then
+          if ${skip_eslint}; then
+            echo "::warning title=${title}::Ignoring code-quality concerns"
+            ignored="true"
+          else
+            echo "::error title=${title}::Static analysis failed because of code-quality concerns"
+            global_failure="true"
+          fi
+        fi
+        if [ ${prettier}  != 'ok' ]; then
+          if ${skip_prettier}; then
+            echo "::warning title=${title}::Ignoring code formatting concerns"
+            ignored="true"
+          else
+            echo "::error title=${title}::Static analysis failed because of code formatting concerns"
+            global_failure="true"
+          fi
+        fi
+        if [ ${global_failure} == 'true' ]; then
+          exit 1
+        elif ${ignored} == 'true'; then
+          echo "::warning title=${title}::Static analysis pass because some failures were ignored"
+        else
+          echo "::notice title=${title}::Success"
+        fi
+      shell: sh
