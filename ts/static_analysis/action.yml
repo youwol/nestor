@@ -34,9 +34,9 @@ runs:
           title="Security issues in dependencies for job '${job_id}'"
           echo "::group::Yarn auditing report"
           yarn audit || true
-          echo "::nogroup::"
+          echo "::endgroup::"
           echo "::warning title=${title}::See 'Yarn auditing report' in logs and audit.json for details"
-          echo "::set-ouput name=result::ko"
+          echo "::set-output name=result::ko"
         fi
       shell: sh
 
@@ -51,7 +51,7 @@ runs:
         else
           title="Code-quality concerns for job '${job_id}'"
           echo "::warning title=${title}::See logs and eslint.html for details"
-          echo "::set-ouput name=result::ko"
+          echo "::set-output name=result::ko"
         fi
       shell: sh
 
@@ -63,16 +63,16 @@ runs:
         # Yarn prettier
         echo "::group::Yarn prettier logs"
         if files=$(yarn -s prettier --list-different .) ; then
-          echo "::nogroup::"
+          echo "::endgroup::"
           echo "::set-output name=result::ok"
         else
-          echo "::nogroup::"
+          echo "::endgroup::"
           title="Malformatted code source for job '${job_id}'"
           echo "::warning title=${title}::See 'Yarn prettier logs' and/or annotations for details"
           for file in ${files} ; do
             echo "::warning file=${file},title=${title}::Mal-formatted file"
           done
-          echo "::set-ouput name=result::ko"
+          echo "::set-output name=result::ko"
         fi
       shell: sh
 
@@ -123,7 +123,7 @@ runs:
         title="Static analysis for job '${job_id}'"
         ignored="false"
         global_failure="false"
-        if [ ${audit} != 'ok' ]; then
+        if [ "${audit}" != 'ok' ]; then
           if ${skip_audit}; then
             echo "::warning title=${title}::Ignoring dependencies audit failure"
             ignored="true"
@@ -132,7 +132,7 @@ runs:
             global_failure="true"
           fi
         fi
-        if [ ${eslint} != 'ok' ]; then
+        if [ "${eslint}" != 'ok' ]; then
           if ${skip_eslint}; then
             echo "::warning title=${title}::Ignoring code-quality concerns"
             ignored="true"
@@ -141,7 +141,7 @@ runs:
             global_failure="true"
           fi
         fi
-        if [ ${prettier}  != 'ok' ]; then
+        if [ "${prettier}"  != 'ok' ]; then
           if ${skip_prettier}; then
             echo "::warning title=${title}::Ignoring code formatting concerns"
             ignored="true"
@@ -150,9 +150,9 @@ runs:
             global_failure="true"
           fi
         fi
-        if [ ${global_failure} == 'true' ]; then
+        if [ "${global_failure}" = 'true' ]; then
           exit 1
-        elif ${ignored} == 'true'; then
+        elif [ "${ignored}" = 'true' ]; then
           echo "::warning title=${title}::Static analysis pass because some failures were ignored"
         else
           echo "::notice title=${title}::Success"
