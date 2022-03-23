@@ -33,8 +33,6 @@ runs:
       id: yarn_test_coverage
       working-directory: ${{ inputs.path }}
       run: |
-        curl http://localhost:2001/healthz
-        echo
         if yarn test-coverage; then
           echo "::set-output name=result::ok"
         else
