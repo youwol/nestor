@@ -1,0 +1,62 @@
+name: Set up a python package repository
+description: Set up a repository and install requirements.txt with pip
+inputs:
+  ref:
+    description: "the ref to checkout (default to develop)"
+    required: false
+    default: develop
+  path:
+    description: "the path where to checkout"
+    required: false
+    default: ''
+  repository:
+    description: "the repository to checkout"
+    required: false
+    default: ''
+  token:
+    description: "the github token for actions/checkout"
+    required: true
+
+outputs:
+  name:
+    description: "the name of the project"
+    value: ${{ steps.summary.outputs.name }}
+  version:
+    description: "the version of the project"
+    value: ${{ steps.summary.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      id: checkout
+      uses: actions/checkout@v3
+      with:
+        token: ${{ inputs.token }}
+        ref: ${{ inputs.ref }}
+        path: ${{ inputs.path }}
+        repository: ${{ inputs.repository }}
+
+    ###### Setup python & dependencies
+    - name: Setup Python 3.9
+      id: setup_python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    - name: Install dependencies
+      id: install_python_dep
+      working-directory: ${{ steps.set_up_vars.outputs.src_dir }}
+      run: pip install -r requirements.txt
+      shell: sh
+
+    - name: Summary
+      id: summary
+      env:
+        job_id: ${{ github.job }}
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
+      run: |
+        ### Log summary & set action outputs
+        echo "::notice title=Set up ${repository}@${$ref} for job '${job_id}'::TODO: grab python package name/version"
+      shell: bash

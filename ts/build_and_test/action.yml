@@ -1,0 +1,115 @@
+name: Build and test typescript package
+description: Build and test (maybe with integration) a typescript package, optionnaly uploading artefacts
+inputs:
+  path:
+    description: "the path of the package"
+    required: false
+    default: ''
+  archive:
+    description: 'artefacts archive name'
+    default: 'build_and_test'
+    required: false
+  integrations:
+    description: 'list of integrations projects to use (py-youwol)'
+    default: ''
+    required: false
+
+runs:
+  using: composite
+
+  steps:
+    - name: Yarn Build
+      id: yarn_build
+      working-directory: ${{ inputs.path }}
+      run: yarn build:prod
+      shell: sh
+
+    - name: Set up py-youwol for integration tests
+      id: set_up_py_youwol_it
+      if: contains(inputs.integrations, 'py-youwol')
+      uses: youwol/nestor/integration/py-youwol/set_up@main
+
+    - name: Yarn Test Coverage
+      id: yarn_test_coverage
+      working-directory: ${{ inputs.path }}
+      run: |
+        curl http://localhost:2001/healthz
+        echo
+        if yarn test-coverage; then
+          echo "::set-output name=result::ok"
+        else
+          echo "::set-output name=result::failed"
+        fi
+      shell: sh
+
+    - name: Tear down py-youwol for integration tests
+      id: tear_down_py_youwol_it
+      if: contains(inputs.integrations, 'py-youwol')
+      uses: youwol/nestor/integration/py-youwol/tear_down@main
+      with:
+        shutdown_script: ${{ steps.set_up_py_youwol_it.outputs.shutdown_script }}
+        src_dir: ${{ steps.set_up_py_youwol_it.outputs.src_dir }}
+        conf_dir: ${{ steps.set_up_py_youwol_it.outputs.conf_dir }}
+        work_dir: ${{ steps.set_up_py_youwol_it.outputs.work_dir }}
+
+    - name: Failed if tests KO
+      if: steps.yarn_test_coverage.outputs.result == 'failed'
+      run: exit 1
+      shell: sh
+
+    - name: Yarn documentation
+      id: yarn_doc
+      working-directory: ${{ inputs.path }}
+      run: yarn doc --json doc.json
+      shell: sh
+
+    - name: Prepare typescript site artefacts
+      id: prepare_ts_site_artefacts
+      if: inputs.archive != ''
+      working-directory: ${{ inputs.path }}
+      run: |
+        ### Prepare site artefacts
+        echo "::group::Make dir"
+        site_dir="site"
+        mkdir -p "${site_dir}"
+        echo "::endgroup::"
+        #
+        echo "::group::Move site artefacts"
+        mv dist/docs "${site_dir}/doc"
+        mv coverage/lcov-report "${site_dir}/coverage"
+        mv dist/bundle_analysis.html "${site_dir}/"
+        mv README.md "${site_dir}/"
+        echo "::endgroup::"
+        #
+        echo "::set-output name=dir::${site_dir}"
+      shell: sh
+
+    - name: Prepare typescript data artefacts
+      id: prepare_ts_data_artefacts
+      if: inputs.archive != ''
+      working-directory: ${{ inputs.path }}
+      run: |
+        ### Prepare data artefacts
+        echo "::group::Make dir"
+        data_dir="_data"
+        mkdir -p "${data_dir}"
+        echo "::endgroup::"
+        #
+        echo "::group::Move data artefacts"
+        mv doc.json "${data_dir}/doc.json"
+        mv coverage-final.json "${data_dir}"/coverage.json
+        echo "::endgroup::"
+        #
+        echo "::set-output name=dir::${data_dir}"
+      shell: sh
+
+    - name: Upload typescript build artifacts
+      id: upload_ts_artifacts
+      if: inputs.archive != ''
+      working-directory: ${{ inputs.path }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.archive }}
+        path: |
+          ${{ steps.prepare_ts_site_artefacts.outputs.dir }}
+          ${{ steps.prepare_ts_data_artefacts.outputs.dir }}

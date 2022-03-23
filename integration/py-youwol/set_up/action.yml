@@ -1,0 +1,119 @@
+name: Set up PyYouwol Integration Testing
+description: Set up & launch py-youwol for integration testing
+inputs:
+  src_ref:
+    description: Git ref for py-youwol checkout
+    required: false
+    default: master
+  conf_ref:
+    description: Git ref for integration-tests-conf checkout
+    required: false
+    default: main
+outputs:
+  shutdown_script:
+    description: path to the shutdown script
+    value: ${{ steps.summary.outputs.shutdown_script }}
+  src_dir:
+    description: path to py-youwol source directory
+    value: ${{ steps.summary.outputs.src_dir }}
+  conf_dir:
+    description: path to configuration directory
+    value: ${{ steps.summary.outputs.conf_dir }}
+  work_dir:
+    description: path to working directory
+    value: ${{ steps.summary.outputs.work_dir }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up action variables
+      id: set_up_vars
+      run: |
+        ### Set up action variables
+        echo "::group::make working directory"
+        random=$(awk 'BEGIN { srand(); print int(rand()*32768) }' /dev/null | base64)
+        working_dir="${RUNNER_TEMP}/py-youwoul-integration/${random}"
+        mkdir -p "${working_dir}"
+        echo "::endgroup::"
+        #
+        echo "::group::outputs"
+        echo "::set-output name=working_dir::${working_dir}"
+        echo "::set-output name=src_dir::$GITHUB_WORKSPACE/.py-youwol-integration/py-youwol"
+        echo "::set-output name=conf_dir::$GITHUB_WORKSPACE/.py-youwol-integration/it-conf"
+        echo "::set-output name=shutdown_script::${working_dir}/py-youwol.shutdown.sh" 
+        echo "::endgroup::"
+      shell: sh
+
+###### Checkout repositories
+    # Checkout py-youwol into $py_it_src_dir, using the ref from input pyYouwolRef
+    - name: Set up py-youwol repository
+      id: setup_py_youwol
+      uses: youwol/nestor/py/set_up_repo@main
+      with:
+        repository: youwol/py-youwol
+        ref: ${{ inputs.src_ref }}
+        path: ${{ steps.set_up_vars.outputs.src_dir }}
+    # Checkout the integration testing conf into $py_it_conf_dir, using the ref from input integrationTestsRef
+    - name: Checkout integration tests configuration repo
+      id: checkout_it_conf
+      uses: actions/checkout@v3
+      with:
+        repository: youwol/integration-tests-conf
+        ref: ${{ inputs.conf_ref }}
+        path: ${{ steps.set_up_vars.outputs.conf_dir }}
+
+###### Launch py-youwol
+    # Launching py-youwol
+    # The working directory is important, it's there that the shutdown script will be generated
+    # PYTHONPATH is defined only for this step, so it does not pollute other steps or jobs
+    - name: Launch py-youwol
+      id: launch_py_youwol
+      working-directory: ${{ steps.set_up_vars.outputs.working_dir }}
+      env:
+        PYTHONPATH: ${{ steps.set_up_vars.outputs.src_dir }}
+        src_dir: ${{ steps.set_up_vars.outputs.src_dir }}
+        conf_dir: ${{ steps.set_up_vars.outputs.conf_dir }}
+      run: python3 -u ${src_dir}/youwol/main.py --conf ${conf_dir}/yw_config_IT.py > py-youwol.out 2> py-youwol.err &
+      shell: sh
+    # Try at most 10 times to call healtz endpoint, checking its response, and waiting 1 second between retries
+    - name: Wait for running instance
+      id: wait_py_youwol_running
+      run: |
+        ### Wait for running instance
+        jq_cmd='if .status == "py-youwol ok" then halt else error ("incorrect status from py-youwol") end'
+        #
+        echo "::group::Trying at most 10 times to call healtz endpoint, waiting 1 seconde between retries"
+        for try in $(seq 1 1 10); do
+          echo "try $try/10 to contact py-youwol instance"
+          response=$(curl --silent http://localhost:2001/healthz || echo "No response")
+          echo "Response : '${response}'"
+          if echo "${response}" | jq -e "${jq_cmd}"; then
+            exit 0
+          else
+            echo "Invalid response. Retrying in 1 second"
+            sleep 1
+          fi
+        done
+        #
+        echo "::endgroup::"
+        echo "::error ::Failed to contact py-youwol instance after 10 seconds"
+        exit 1
+      shell: sh
+    # Finally, some annotated logging about how everything is configured
+    - name: Summary
+      id: summary
+      env:
+        src_ref: ${{ inputs.scr_ref }}
+        conf_ref: ${{ inputs.conf_ref }}
+        shutdown_script: ${{ steps.set_up_vars.outputs.shutdown_script }}
+        src_dir: ${{ steps.set_up_vars.outputs.src_dir }}
+        conf_dir: ${{ steps.set_up_vars.outputs.conf_dir }}
+        work_dir: ${{ steps.set_up_vars.outputs.working_dir }}
+      run: |
+        ### Log summary
+        echo "::notice title=Py-Youwol Integration Testing::youwol/py-youwol@${src_ref} running with configuration from youwol/integration-tests-conf@${conf_ref}"
+        echo "::set-output name=shutdown_script::${shutdown_script}"
+        echo "::set-output name=src_dir::${src_dir}"
+        echo "::set-output name=conf_dir::${conf_dir}"
+        echo "::set-output name=work_dir::${work_dir}"
+      shell: sh

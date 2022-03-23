@@ -1,0 +1,56 @@
+name: Tear Down PyYouwol Integration Testing
+description: Stop daemonized py-youwol and remove directory
+inputs:
+  shutdown_script:
+    description: "Path to the shutdown script to call"
+    required: true
+  src_dir:
+    description: "Path to py-youwol sources directory"
+    required: true
+  conf_dir:
+    description: "Path to configuration directory"
+    required: true
+  work_dir:
+    description: "Path to work directory"
+    required: true
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Stop py-youwol
+      id: stop_py-youwol
+      env:
+        shutdown_script: ${{ inputs.shutdown_script }}
+      run: |
+        if -e ${shutdown_script}; then
+          sh ${shutdown_script}
+        fi
+      shell: sh
+
+    - name: Upload py-youwol integration working directory
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration_py-youwol-work-dir
+        path: ${{ inputs.work_dir }}
+
+    - name: Tear down
+      id: tear_down_py_youwol
+      env:
+        src_dir: ${{ inputs.src_dir }}
+        conf_dir: ${{ inputs.conf_dir }}
+        work_dir: ${{ inputs.work_dir }}
+      run: |
+        ### Tear down py-youwol
+        rm -r ${src_dir}
+        rm -r ${conf_dir}
+        rm -r ${work_dir}
+      shell: sh
+
+    - name: Summary
+      id: sunnary
+      run: |
+        ### Log summary
+        message="py-youwol has been shutdown and afferent directories have been removed"
+        echo "::notice title=Py-Youwol Integration Testing::${message}"
+      shell: bash

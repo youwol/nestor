@@ -1,0 +1,47 @@
+name: Static analyzes a typescript package
+description: Various quality checks for typescript packages, optionnaly uploading analysis artefacts
+inputs:
+  archive:
+    description: "artefacts archive name"
+    required: false
+    default: 'static_analysis'
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Audit dependencies
+      id: yarn_audit
+      run: yarn audit
+      shell: sh
+
+    - name: Check code formatting with yarn prettier
+      id: yarn_prettier
+      run: yarn prettier --check .
+      shell: sh
+
+    - name: Check code quality with yarn eslint
+      id: yarn_eslint
+      run: yarn eslint --format html --output-file lint.html .
+      shell: sh
+
+    - name: Prepare site artefacts
+      id: prepare_site_artefacts
+      if: inputs.archive != ''
+      run: |
+        ### Prepare site artefacts
+        site_dir="site"
+        mkdir -p "${site_dir}"
+        mv lint.html "${site_dir}/"
+        echo "::set-output name=dir::${site_dir}"
+      shell: sh
+
+    - name: Upload artefacts
+      id: upload_artefacts
+      if: inputs.archive != ''
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.archive }}
+        path: |
+          ${{ steps.prepare_site_artefacts.dir }}
