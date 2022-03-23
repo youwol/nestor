@@ -50,7 +50,6 @@ runs:
       if: contains(inputs.integrations, 'py-youwol')
       uses: youwol/nestor/integration/py-youwol/tear_down@main
       with:
-        shutdown_script: ${{ steps.set_up_py_youwol_it.outputs.shutdown_script }}
         src_dir: ${{ steps.set_up_py_youwol_it.outputs.src_dir }}
         conf_dir: ${{ steps.set_up_py_youwol_it.outputs.conf_dir }}
         work_dir: ${{ steps.set_up_py_youwol_it.outputs.work_dir }}
