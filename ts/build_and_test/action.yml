@@ -81,7 +81,7 @@ runs:
         mv README.md "${site_dir}/"
         echo "::endgroup::"
         #
-        echo "::set-output name=dir::${site_dir}"
+        echo "::set-output name=dir::$(realpath ${site_dir})"
       shell: sh
 
     - name: Prepare typescript data artefacts
@@ -100,13 +100,12 @@ runs:
         mv coverage-final.json "${data_dir}"/coverage.json
         echo "::endgroup::"
         #
-        echo "::set-output name=dir::${data_dir}"
+        echo "::set-output name=dir::$(realpath ${data_dir})"
       shell: sh
 
     - name: Upload typescript build artifacts
       id: upload_ts_artifacts
       if: inputs.archive != ''
-      working-directory: ${{ inputs.path }}
       uses: actions/upload-artifact@v3
       with:
         name: ${{ inputs.archive }}
