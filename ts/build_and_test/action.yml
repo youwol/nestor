@@ -95,7 +95,7 @@ runs:
         #
         echo "::group::Move data artefacts"
         mv doc.json "${data_dir}/doc.json"
-        mv coverage-final.json "${data_dir}"/coverage.json
+        mv coverage/coverage-final.json "${data_dir}"/coverage.json
         echo "::endgroup::"
         #
         echo "::set-output name=dir::$(realpath ${data_dir})"
