@@ -46,7 +46,7 @@ runs:
         cache: 'pip'
     - name: Install dependencies
       id: install_python_dep
-      working-directory: ${{ steps.set_up_vars.outputs.src_dir }}
+      working-directory: ${{ inputs.path }}
       run: pip install -r requirements.txt
       shell: sh
 
