@@ -9,6 +9,9 @@ inputs:
     description: Git ref for integration-tests-conf checkout
     required: false
     default: main
+  token:
+    description: Github Token for checkout
+    required: true
 outputs:
   shutdown_script:
     description: path to the shutdown script
@@ -53,6 +56,7 @@ runs:
         repository: youwol/py-youwol
         ref: ${{ inputs.src_ref }}
         path: ${{ steps.set_up_vars.outputs.src_dir }}
+        token: ${{ inputs.token }}
     # Checkout the integration testing conf into $py_it_conf_dir, using the ref from input integrationTestsRef
     - name: Checkout integration tests configuration repo
       id: checkout_it_conf
@@ -61,6 +65,7 @@ runs:
         repository: youwol/integration-tests-conf
         ref: ${{ inputs.conf_ref }}
         path: ${{ steps.set_up_vars.outputs.conf_dir }}
+        token: ${{ inputs.token }}
 
 ###### Launch py-youwol
     # Launching py-youwol

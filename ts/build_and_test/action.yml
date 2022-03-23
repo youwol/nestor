@@ -13,6 +13,9 @@ inputs:
     description: 'list of integrations projects to use (py-youwol)'
     default: ''
     required: false
+  token:
+    description: Github token for checkout
+    required: true
 
 runs:
   using: composite
@@ -28,6 +31,8 @@ runs:
       id: set_up_py_youwol_it
       if: contains(inputs.integrations, 'py-youwol')
       uses: youwol/nestor/integration/py-youwol/set_up@main
+      with:
+        token: ${{ inputs.token }}
 
     - name: Yarn Test Coverage
       id: yarn_test_coverage
