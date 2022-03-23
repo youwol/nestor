@@ -16,6 +16,12 @@ runs:
   using: composite
 
   steps:
+    - name: Prepare artefact directory
+      id: prepare_dir
+      run: |
+        [ -d dist ] || mkdir dist
+      shell: sh
+
     - name: Audit dependencies
       id: yarn_audit
       env:
@@ -40,11 +46,11 @@ runs:
         job_id: ${{ github.job }}
       run: |
         # Yarn eslint
-        if yarn -s eslint --format html --output-file dist/lint.html . ; then
+        if yarn -s eslint --format html --output-file dist/eslint.html . ; then
           echo "::set-output name=result::ok"
         else
           title="Code-quality concerns for job '${job_id}'"
-          echo "::warning title=${title}::See logs and lint.html for details"
+          echo "::warning title=${title}::See logs and eslint.html for details"
           echo "::set-ouput name=result::ko"
         fi
       shell: sh
@@ -77,9 +83,19 @@ runs:
         ### Prepare site artefacts
         site_dir="site"
         mkdir -p "${site_dir}"
-        mv dist/audit.json "${site_dir}/"
-        mv dist/lint.html "${site_dir}/"
+        mv dist/eslint.html "${site_dir}/"
         echo "::set-output name=dir::$(realpath ${site_dir})"
+      shell: sh
+
+    - name: Prepare data artefacts
+      id: prepare_data_artefacts
+      if: inputs.archive != ''
+      run: |
+        ### Prepare data artefacts
+        data_dir="_data"
+        mkdir -p "${data_dir}"
+        mv dist/audit.json "${data_dir}/"
+        echo "::set-output name=dir::$(realpath ${data_dir})"
       shell: sh
 
     - name: Upload artefacts
@@ -89,6 +105,7 @@ runs:
       with:
         name: ${{ inputs.archive }}
         path: |
+          ${{ steps.prepare_data_artefacts.outputs.dir }}
           ${{ steps.prepare_site_artefacts.outputs.dir }}
 
     - name: Summary
