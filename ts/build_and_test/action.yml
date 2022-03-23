@@ -75,7 +75,7 @@ runs:
         echo "::group::Move site artefacts"
         mv dist/docs "${site_dir}/doc"
         mv coverage/lcov-report "${site_dir}/coverage"
-        mv dist/bundle_analysis.html "${site_dir}/"
+        mv dist/bundle-analysis.html "${site_dir}/"
         mv README.md "${site_dir}/"
         echo "::endgroup::"
         #
