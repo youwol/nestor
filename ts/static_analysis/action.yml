@@ -5,6 +5,11 @@ inputs:
     description: "artefacts archive name"
     required: false
     default: 'static_analysis'
+  skip:
+    description: "list of analysis to skip (audit prettier eslint)"
+    required: false
+    default: 'audit' # Temporary, should be empty
+
 
 
 runs:
@@ -13,16 +18,19 @@ runs:
   steps:
     - name: Audit dependencies
       id: yarn_audit
+      if: ! contains(inputs.skip, 'audit')
       run: yarn audit
       shell: sh
 
     - name: Check code formatting with yarn prettier
       id: yarn_prettier
+      if: ! contains(inputs.skip, 'prettier')
       run: yarn prettier --check .
       shell: sh
 
     - name: Check code quality with yarn eslint
       id: yarn_eslint
+      if: ! contains(inputs.skip, 'eslint')
       run: yarn eslint --format html --output-file lint.html .
       shell: sh
 
