@@ -42,7 +42,7 @@ runs:
         site_dir="site"
         mkdir -p "${site_dir}"
         mv lint.html "${site_dir}/"
-        echo "::set-output name=dir::${site_dir}"
+        echo "::set-output name=dir::$(realpath ${site_dir})"
       shell: sh
 
     - name: Upload artefacts
@@ -52,4 +52,4 @@ runs:
       with:
         name: ${{ inputs.archive }}
         path: |
-          ${{ steps.prepare_site_artefacts.dir }}
+          ${{ steps.prepare_site_artefacts.outputs.dir }}
