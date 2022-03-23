@@ -58,5 +58,6 @@ runs:
         ref: ${{ inputs.ref }}
       run: |
         ### Log summary & set action outputs
-        echo "::notice title=Set up ${repository}@${$ref} for job '${job_id}'::TODO: grab python package name/version"
+        title="Set up ${repository}@${ref} for job '${job_id}'"
+        echo "::notice title=${title}::TODO: grab python package name/version"
       shell: bash
