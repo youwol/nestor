@@ -1,0 +1,37 @@
+name: Fast-forward and push
+description: Fast-forward to a given ref and push everything to origin
+inputs:
+  ref:
+    description: 'the target ref'
+    required: true
+  branch:
+    description: 'the branch to fast-forward'
+    required: false
+    default: main
+
+runs:
+  using: composite
+
+  steps:
+    - name: Fast-forward branch
+      id: fast_forword
+      env:
+        ref: ${{ inputs.ref }}
+        branch: ${{ inputs.branch }}
+      run: |
+        ### Fast-forward main
+        echo "::group::Fetching origin"
+        git fetch origin ${branch}:${branch} --unshallow
+        echo "::endgroup::"
+        echo "::group::Checkout ${branch}"
+        git checkout ${branch} 
+        echo "::endgroup::"
+        echo "::group::Fast-forward branch '${branch}' to ref '${ref}'"
+        git merge --ff-only ${ref} 
+        echo "::endgroup::"
+      shell: sh
+
+    - name: Push
+      id: push
+      run: git push --atomic origin --all --follow-tags
+      shell: sh
