@@ -57,9 +57,10 @@ runs:
       id: yarn_next_version
       env:
         GNUPGHOME: ${{ steps.set_up_gpg.outputs.gnupghome }}
+        version: ${{ inputs.version }}
       run: |
         ### Prepare next version
-        next_version=$(yarn -s semver -i patch ${new_version})-wip
+        next_version=$(yarn -s semver -i patch ${version})-wip
         echo "::group::setting package.json version to ${next_version}"
         yarn -s version --no-git-tag-version --new-version ${next_version}
         echo "::endgroup::"
