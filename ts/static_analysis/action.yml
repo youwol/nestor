@@ -63,6 +63,7 @@ runs:
         # Yarn prettier
         echo "::group::Yarn prettier logs"
         if files=$(yarn -s prettier --list-different .) ; then
+          echo $files
           echo "::endgroup::"
           echo "::set-output name=result::ok"
         else
