@@ -32,7 +32,7 @@ runs:
       run: |
         # Yarn audit
         if yarn -s audit --json > dist/audit.json; then
-          echo "::set-ouput name=result::ok"
+          echo "::set-output name=result::ok"
         else
           title="Security issues in dependencies for job '${job_id}'"
           echo "::group::Yarn auditing report"
