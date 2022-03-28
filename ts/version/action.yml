@@ -1,0 +1,64 @@
+name: Update version
+description: Update version of a typescript package
+inputs:
+  current_version:
+    description: 'the current version'
+    required: true
+  target_version:
+    description: 'the target version'
+    required: true
+  gnupghome:
+    description: GNUPGHOME environnement variable
+    required: false
+    default: ''
+outputs:
+  tag:
+    description: the git tag for target version
+    value: ${{ steps.yarn_version.outputs.tag }}
+
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Check new version string with yarn semver
+      id: check_input_version
+      env:
+        current_version: ${{ inputs.current_version }}
+        target_version: ${{ inputs.target_version }}
+      run: |
+        ### Check target version string
+        echo "Comparing input '${target_version}' to current version '${current_version}'"
+        #
+        target_version_exact=$(yarn -s semver -l "${target_version}")
+        if [ -z "${target_version_exact}" ]; then
+          echo "::error title=Incorrect version::'${target_version}' does not look like a version string"
+          exit 1
+        fi
+        echo "'${target_version}' is parseable"
+        #
+        if [ "${target_version_exact}" != "${target_version}" ]; then
+          message="'${target_version}' does not look like a version string. Did you mean '${target_version_exact}' ?"
+          echo "::error title=Incorrect version::${message}"
+          exit 1
+        fi
+        echo "'${target_version}' is a correct version string"
+        #
+        latest_version=$(yarn -s semver "${current_version}" "${target_version}" | tail -n1 )
+        if [ "${latest_version}" != "${target_version}" ]; then
+          echo "::error title=Incorrect version::'${target_version}' is older than '${current_version}'"
+          exit 1
+        fi
+        echo "'${target_version}' is newer than '${current_version}'"
+      shell: sh
+
+    - name: Update version of Typescript project
+      id: yarn_version
+      env:
+        GNUPGHOME: ${{ inputs.gnupghome }}
+        target_version: ${{ inputs.target_version }}
+      run: |
+        ### Update version
+        yarn -s version --new-version ${target_version}
+        echo "::set-output name=tag::v${target_version}"
+      shell: sh

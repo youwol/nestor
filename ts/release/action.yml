@@ -1,0 +1,91 @@
+name: Make Release
+description: Make a release of a typescript package
+inputs:
+  version:
+    description: 'the version to release'
+    required: true
+  integrations:
+    description: 'list of integrations projects to use (py-youwol)'
+    default: ''
+    required: false
+  nestor_gpg_priv:
+    description: Nestor GPG armored private key
+    required: true
+  nestor_github_pat:
+    description: Nestor Github PAT
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    - name: Set up repo
+      id: set_up_repo
+      uses: youwol/nestor/ts/set_up_repo@main
+      with:
+        token: ${{ inputs.nestor_github_pat }}
+
+    - name: Set up GPG
+      id: set_up_gpg
+      uses: youwol/nestor/gpg/set_up@main
+      with:
+        secret: ${{ inputs.nestor_gpg_priv }}
+
+    - name: Update version
+      id: update_version
+      uses: youwol/nestor/ts/version@main
+      with:
+        current_version: ${{ steps.set_up_repo.outputs.version }}
+        target_version: ${{ inputs.version }}
+        gnupghome: ${{ steps.set_up_gpg.outputs.gnupghome }}
+
+    - name: Static analysis of Typescript project
+      id: static_analysis
+      uses: youwol/nestor/ts/static_analysis@main
+      with:
+        archive: static_analysis
+
+    - name: Build Typescript artefacts
+      id: build_and_test
+      uses: youwol/nestor/ts/build_and_test@main
+      with:
+        archive: build_and_test
+        integrations: ${{ inputs.integrations }}
+        token: ${{ inputs.nestor_github_pat }}
+
+    - name: Prepare next version of Typescript project
+      id: prepare_next_version
+      env:
+        GNUPGHOME: ${{ steps.set_up_gpg.outputs.gnupghome }}
+        version: ${{ inputs.version }}
+      run: |
+        ### Prepare next version
+        next_version=$(yarn -s semver -i patch ${version})-wip
+        echo "::group::setting package.json version to ${next_version}"
+        yarn -s version --no-git-tag-version --new-version ${next_version}
+        echo "::endgroup::"
+        echo "::group::Commiting package.json"
+        git add package.json
+        git commit -m "🔖 start ${next_version}"
+        echo "::endgroup::"
+        echo "::set-output name=version::${next_version}"
+      shell: sh
+
+    - name: Fast-forward main to release tag and push
+      id: ff_and_push
+      uses: youwol/nestor/git/fast_forward_push@main
+      with:
+        ref: ${{ steps.update_version.outputs.tag }}
+
+    - name: Summary
+      id: summary
+      env:
+        previous_version: ${{ steps.set_up_repo.outputs.version }}
+        version: ${{ inputs.version }}
+        next_version: ${{ steps.prepare_next_version.outputs.next_version }}
+        project_name: ${{ steps.set_up_repo.outputs.name }}
+      run: |
+        ### Log Summary
+        echo "::notice title=${project_name}: release ${version}::New version '${version}' tagged on branch main & develop"
+        echo "::notice title=${project_name}: develop ${next_version}::On branch develop '${previous_version}' => '${next_version}'"
+      shell: sh
