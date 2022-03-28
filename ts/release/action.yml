@@ -4,6 +4,10 @@ inputs:
   version:
     description: 'the version to release'
     required: true
+  integrations:
+    description: 'list of integrations projects to use (py-youwol)'
+    default: ''
+    required: false
   nestor_gpg_priv:
     description: Nestor GPG armored private key
     required: true
@@ -19,13 +23,13 @@ runs:
       id: set_up_repo
       uses: youwol/nestor/ts/set_up_repo@main
       with:
-        token: ${{ inputs.NESTOR_GITHUB_PAT }}
+        token: ${{ inputs.nestor_github_pat }}
 
     - name: Set up GPG
       id: set_up_gpg
       uses: youwol/nestor/gpg/set_up@test_release
       with:
-        secret: ${{ inputs.NESTOR_GPG_PRIV }}
+        secret: ${{ inputs.nestor_gpg_priv }}
 
     - name: Update version
       id: update_version
@@ -46,6 +50,8 @@ runs:
       uses: youwol/nestor/ts/build_and_test@main
       with:
         archive: build_and_test
+        integrations: ${{ inputs.integrations }}
+        token: ${{ inputs.nestor_github_pat }}
 
     - name: Prepare next version of Typescript project
       id: yarn_next_version
