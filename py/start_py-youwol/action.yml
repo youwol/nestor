@@ -63,9 +63,12 @@ runs:
         config_path: ${{ inputs.config }}
       run: python3 -u ${main_path} --conf ${config_path} > py-youwol.out 2> py-youwol.err &
       shell: sh
+
     # Try at most 10 times to call healtz endpoint, checking its response, and waiting 1 second between retries
     - name: Wait for running instance
       id: wait_py_youwol_running
+      env:
+        py_youwol_work_dir: ${{ steps.set_up_vars.outputs.work_dir }}
       run: |
         ### Wait for running instance
         jq_cmd='if .status == "py-youwol ok" then halt else error ("incorrect status from py-youwol") end'
@@ -84,6 +87,8 @@ runs:
         done
         #
         echo "::endgroup::"
+        cat ${py_youwol_work_dir}/py-youwol.out
+        cat ${py_youwol_work_dir}/py-youwol.err
         echo "::error ::Failed to contact py-youwol instance after 10 seconds"
         exit 1
       shell: sh
