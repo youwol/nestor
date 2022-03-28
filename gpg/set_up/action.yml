@@ -42,9 +42,7 @@ runs:
         echo "::endgroup::"
         #
         echo "::group::Import GPG private key"
-        echo ${nestor_gpg_priv} | wc
-        echo ${nestor_gpg_priv} | tail -n2
-        echo ${nestor_gpg_priv} | gpg --import --batch --no-tty
+        gpg --import --batch --no-tty <<<${nestor_gpg_priv}
         echo "::endgroup::"
         #
         echo "::group::Get key fingerprint"
@@ -56,7 +54,7 @@ runs:
         echo "::set-output name=gnupghome::$GNUPGHOME"
         echo "::set-output name=nestor_signingkey::$fpr"
         echo "::endgroup::"
-      shell: sh
+      shell: bash
 
     - name: Set up git
       id: set_up_git
