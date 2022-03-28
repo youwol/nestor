@@ -8,6 +8,10 @@ inputs:
     description: 'list of integrations projects to use (py-youwol)'
     default: ''
     required: false
+  ignore:
+    description: 'list of failures to ignore (audit prettier eslint tests)'
+    default: ''
+    required: false
   nestor_gpg_priv:
     description: Nestor GPG armored private key
     required: true
@@ -44,6 +48,7 @@ runs:
       uses: youwol/nestor/ts/static_analysis@main
       with:
         archive: static_analysis
+        ignore: ${{ inputs.ignore }}
 
     - name: Build Typescript artefacts
       id: build_and_test
@@ -52,6 +57,7 @@ runs:
         archive: build_and_test
         integrations: ${{ inputs.integrations }}
         token: ${{ inputs.nestor_github_pat }}
+        ignore: ${{ inputs.ignore }}
 
     - name: Prepare next version of Typescript project
       id: prepare_next_version
@@ -84,8 +90,12 @@ runs:
         version: ${{ inputs.version }}
         next_version: ${{ steps.prepare_next_version.outputs.next_version }}
         project_name: ${{ steps.set_up_repo.outputs.name }}
+        ignored: ${{ steps.static_analysis.output.ignored }} ${{ steps.build_and_test.output.ignored }}
       run: |
         ### Log Summary
         echo "::notice title=${project_name}: release ${version}::New version '${version}' tagged on branch main & develop"
         echo "::notice title=${project_name}: develop ${next_version}::On branch develop '${previous_version}' => '${next_version}'"
+        if [ -n "${ignored}" -a "${ignored}" != " "  ]; then
+          echo "::warning title=${project_name}: release ${version} with some failures::Release build despite some failures : ${ignored}"
+        fi
       shell: sh

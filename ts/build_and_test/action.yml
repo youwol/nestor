@@ -13,9 +13,17 @@ inputs:
     description: 'list of integrations projects to use (py-youwol)'
     default: ''
     required: false
+  ignore:
+    description: 'list of failures to ignore (tests)'
+    default: ''
+    required: false
   token:
     description: Github token for checkout
     required: true
+outputs:
+  ignored:
+    description: list of failures ignored
+    value: ${{ steps.on_tests_failure.outputs.ignored }}
 
 runs:
   using: composite
@@ -54,9 +62,20 @@ runs:
         conf_dir: ${{ steps.set_up_py_youwol_it.outputs.conf_dir }}
         work_dir: ${{ steps.set_up_py_youwol_it.outputs.work_dir }}
 
-    - name: Failed if tests KO
+    - name: On tests failure
+      id: on_tests_failure
       if: steps.yarn_test_coverage.outputs.result == 'failed'
-      run: exit 1
+      env:
+        ignore: ${{ contains(inputs.ignore, 'tests') }}
+      run: |
+        # On test failure
+        if ${ignore}; then
+          echo "::warning::Tests failure"
+          echo "::set-output name=ignored::tests"
+        else
+          echo "::error::Tests failure"
+          exit 1
+        fi
       shell: sh
 
     - name: Yarn documentation

@@ -6,10 +6,13 @@ inputs:
     required: false
     default: 'static_analysis'
   ignore:
-    description: "list of analysis failure to ignore (audit prettier eslint)"
+    description: "list of analysis failures to ignore (audit prettier eslint)"
     required: false
     default: ''
-
+outputs:
+  ignored:
+    description: "list of analysis failures ignored"
+    value: ${{ steps.summary.outputs.ignored }}
 
 
 runs:
@@ -122,12 +125,12 @@ runs:
       run: |
         # Summary
         title="Static analysis for job '${job_id}'"
-        ignored="false"
+        ignored=""
         global_failure="false"
         if [ "${audit}" != 'ok' ]; then
           if ${ignore_audit}; then
             echo "::warning title=${title}::Ignoring dependencies audit failure"
-            ignored="true"
+            ignored="${ignored}audit "
           else
             echo "::error title=${title}::Static analysis failed because of dependencies security issues"
             global_failure="true"
@@ -136,7 +139,7 @@ runs:
         if [ "${eslint}" != 'ok' ]; then
           if ${ignore_eslint}; then
             echo "::warning title=${title}::Ignoring code-quality concerns"
-            ignored="true"
+            ignored="${ignored}eslint "
           else
             echo "::error title=${title}::Static analysis failed because of code-quality concerns"
             global_failure="true"
@@ -145,7 +148,7 @@ runs:
         if [ "${prettier}"  != 'ok' ]; then
           if ${ignore_prettier}; then
             echo "::warning title=${title}::Ignoring code formatting concerns"
-            ignored="true"
+            ignored="${ignored}prettier "
           else
             echo "::error title=${title}::Static analysis failed because of code formatting concerns"
             global_failure="true"
@@ -153,9 +156,10 @@ runs:
         fi
         if [ "${global_failure}" = 'true' ]; then
           exit 1
-        elif [ "${ignored}" = 'true' ]; then
-          echo "::warning title=${title}::Static analysis pass because some failures were ignored"
-        else
+        elif [ -z "${ignored}" ]; then
           echo "::notice title=${title}::Success"
+        else
+          echo "::warning title=${title}::Static analysis pass because some failures were ignored"
+          echo "::set-output name=ignored::${ignored}"
         fi
       shell: sh
