@@ -66,10 +66,10 @@ runs:
         # Yarn prettier
         echo "::group::Yarn prettier logs"
         if files=$(yarn -s prettier --list-different .) ; then
-          echo $files
           echo "::endgroup::"
           echo "::set-output name=result::ok"
         else
+          echo $files
           echo "::endgroup::"
           title="Malformatted code source for job '${job_id}'"
           echo "::warning title=${title}::See 'Yarn prettier logs' and/or annotations for details"
