@@ -20,6 +20,10 @@ inputs:
   token:
     description: Github token for checkout
     required: true
+  needPyYouwol:
+    description: Are we insane ?
+    required: false
+    default: "true"
 outputs:
   ignored:
     description: list of failures ignored
@@ -29,16 +33,34 @@ runs:
   using: composite
 
   steps:
+    - name: Install PyYouwol
+      id: insanity
+      if: contains(inputs.needPyYouwol, 'true')
+      uses: youwol-jdecharne/nestor/py/set_up_repo@main
+      with:
+        ref: main
+        path: py-youwol
+        repository: youwol/py-youwol
+        token: ${{ inputs.token }}
+
+    - name: Move PyYouwol
+      id: insanity_bis
+      if: contains(inputs.needPyYouwol, 'true')
+      run: mv py-youwol ${RUNNER_TEMP}/py-youwol
+      shell: sh
+
     - name: Yarn Build
       id: yarn_build
       working-directory: ${{ inputs.path }}
+      env:
+        PYTHONPATH: ${{ runner.temp }}/py-youwol
       run: yarn build:prod
       shell: sh
 
     - name: Set up py-youwol for integration tests
       id: set_up_py_youwol_it
       if: contains(inputs.integrations, 'py-youwol')
-      uses: youwol/nestor/integration/py-youwol/set_up@main
+      uses: youwol-jdecharne/nestor/integration/py-youwol/set_up@main
       with:
         token: ${{ inputs.token }}
 
@@ -56,7 +78,7 @@ runs:
     - name: Tear down py-youwol for integration tests
       id: tear_down_py_youwol_it
       if: contains(inputs.integrations, 'py-youwol')
-      uses: youwol/nestor/integration/py-youwol/tear_down@main
+      uses: youwol-jdecharne/nestor/integration/py-youwol/tear_down@main
       with:
         src_dir: ${{ steps.set_up_py_youwol_it.outputs.src_dir }}
         conf_dir: ${{ steps.set_up_py_youwol_it.outputs.conf_dir }}

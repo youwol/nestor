@@ -60,4 +60,4 @@ runs:
         ### Log summary & set action outputs
         title="Set up ${repository}@${ref} for job '${job_id}'"
         echo "::notice title=${title}::TODO: grab python package name/version"
-      shell: bash
+      shell: sh
