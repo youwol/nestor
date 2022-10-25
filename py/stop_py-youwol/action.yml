@@ -21,8 +21,10 @@ runs:
       env:
         shutdown_script: ${{ inputs.work_dir }}/py-youwol.shutdown.sh
       run: |
-        if -e ${shutdown_script}; then
+        if [ -e ${shutdown_script} ] ; then
           sh ${shutdown_script}
+        else
+          echo "ERROR : SCRIPT NOT FOUND at ${shutdown_script}"
         fi
       shell: sh
 

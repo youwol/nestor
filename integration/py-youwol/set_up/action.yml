@@ -48,7 +48,7 @@ runs:
     # Checkout py-youwol into $py_it_src_dir, using the ref from input pyYouwolRef
     - name: Start py-youwol
       id: start_py-youwol
-      uses: youwol/nestor/py/start_py-youwol@main
+      uses: youwol-jdecharne/nestor/py/start_py-youwol@main
       with:
         ref: ${{ inputs.src_ref }}
         config: ${{ steps.set_up_vars.outputs.conf_dir }}/yw_config_IT.py

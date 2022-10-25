@@ -17,7 +17,7 @@ runs:
   steps:
     - name: Stop py-youwol
       id: stop_py-youwol
-      uses: youwol/nestor/py/stop_py-youwol@main
+      uses: youwol-jdecharne/nestor/py/stop_py-youwol@main
       with:
         src_dir: ${{ inputs.src_dir }}
         work_dir: ${{ inputs.work_dir }}

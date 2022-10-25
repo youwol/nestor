@@ -43,7 +43,7 @@ runs:
     # Checkout py-youwol into $py_it_src_dir, using the ref from input pyYouwolRef
     - name: Set up py-youwol repository
       id: setup_py_youwol
-      uses: youwol/nestor/py/set_up_repo@main
+      uses: youwol-jdecharne/nestor/py/set_up_repo@main
       with:
         repository: youwol/py-youwol
         ref: ${{ inputs.ref }}
@@ -61,7 +61,7 @@ runs:
         PYTHONPATH: ${{ steps.set_up_vars.outputs.src_dir }}
         main_path: ${{ steps.set_up_vars.outputs.src_dir }}/youwol/main.py
         config_path: ${{ inputs.config }}
-      run: python3 -u ${main_path} --conf ${config_path} > py-youwol.out 2> py-youwol.err &
+      run: python3 -u ${main_path} --conf ${config_path} --daemonize
       shell: sh
 
     # Try at most 10 times to call healtz endpoint, checking its response, and waiting 1 second between retries
