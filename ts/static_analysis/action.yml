@@ -32,14 +32,14 @@ runs:
       run: |
         # Yarn audit
         if yarn -s audit --json > dist/audit.json; then
-          echo "::set-output name=result::ok"
+          echo "result=ok" >> $GITHUB_ACTION
         else
           title="Security issues in dependencies for job '${job_id}'"
           echo "::group::Yarn auditing report"
           yarn audit || true
           echo "::endgroup::"
           echo "::warning title=${title}::See 'Yarn auditing report' in logs and audit.json for details"
-          echo "::set-output name=result::ko"
+          echo "result=ko" >> $GITHUB_ACTION
         fi
       shell: sh
 
@@ -50,11 +50,11 @@ runs:
       run: |
         # Yarn eslint
         if yarn -s eslint --format html --output-file dist/eslint.html . ; then
-          echo "::set-output name=result::ok"
+          echo "result=ok" >> $GITHUB_ACTION
         else
           title="Code-quality concerns for job '${job_id}'"
           echo "::warning title=${title}::See logs and eslint.html for details"
-          echo "::set-output name=result::ko"
+          echo "result=ko" >> $GITHUB_ACTION
         fi
       shell: sh
 
@@ -67,7 +67,7 @@ runs:
         echo "::group::Yarn prettier logs"
         if files=$(yarn -s prettier --list-different .) ; then
           echo "::endgroup::"
-          echo "::set-output name=result::ok"
+          echo "result=ok" >> $GITHUB_ACTION
         else
           echo $files
           echo "::endgroup::"
@@ -76,7 +76,7 @@ runs:
           for file in ${files} ; do
             echo "::warning file=${file},title=${title}::Mal-formatted file"
           done
-          echo "::set-output name=result::ko"
+          echo "result=ko" >> $GITHUB_ACTION
         fi
       shell: sh
 
@@ -88,7 +88,7 @@ runs:
         site_dir="site"
         mkdir -p "${site_dir}"
         mv dist/eslint.html "${site_dir}/"
-        echo "::set-output name=dir::$(realpath ${site_dir})"
+        echo "dir=$(realpath ${site_dir})" >> $GITHUB_ACTION
       shell: sh
 
     - name: Prepare data artefacts
@@ -99,7 +99,7 @@ runs:
         data_dir="_data"
         mkdir -p "${data_dir}"
         mv dist/audit.json "${data_dir}/"
-        echo "::set-output name=dir::$(realpath ${data_dir})"
+        echo "dir=$(realpath ${data_dir})" >> $GITHUB_ACTION
       shell: sh
 
     - name: Upload artefacts
@@ -160,6 +160,6 @@ runs:
           echo "::notice title=${title}::Success"
         else
           echo "::warning title=${title}::Static analysis pass because some failures were ignored"
-          echo "::set-output name=ignored::${ignored}"
+          echo "ignored=${ignored}" >> $GITHUB_ACTION
         fi
       shell: sh

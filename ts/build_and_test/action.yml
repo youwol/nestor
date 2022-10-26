@@ -47,9 +47,9 @@ runs:
       working-directory: ${{ inputs.path }}
       run: |
         if yarn test-coverage; then
-          echo "::set-output name=result::ok"
+          echo "result=ok" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=result::failed"
+          echo "result=ko" >> $GITHUB_OUTPUT
         fi
       shell: sh
 
@@ -64,14 +64,14 @@ runs:
 
     - name: On tests failure
       id: on_tests_failure
-      if: steps.yarn_test_coverage.outputs.result == 'failed'
+      if: steps.yarn_test_coverage.outputs.result == 'ko'
       env:
         ignore: ${{ contains(inputs.ignore, 'tests') }}
       run: |
         # On test failure
         if ${ignore}; then
           echo "::warning::Tests failure"
-          echo "::set-output name=ignored::tests"
+          echo "ignored=tests" >> $GITHUB_OUTPUT
         else
           echo "::error::Tests failure"
           exit 1
@@ -102,7 +102,7 @@ runs:
         mv README.md "${site_dir}/"
         echo "::endgroup::"
         #
-        echo "::set-output name=dir::$(realpath ${site_dir})"
+        echo "dir=$(realpath ${site_dir})" >> $GITHUB_ACTION
       shell: sh
 
     - name: Prepare typescript data artefacts
@@ -121,7 +121,7 @@ runs:
         mv coverage/coverage-final.json "${data_dir}"/coverage.json
         echo "::endgroup::"
         #
-        echo "::set-output name=dir::$(realpath ${data_dir})"
+        echo "dir=$(realpath ${data_dir})" >> $GITHUB_ACTION
       shell: sh
 
     - name: Upload typescript build artifacts

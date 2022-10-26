@@ -33,9 +33,9 @@ runs:
         echo "::endgroup::"
         #
         echo "::group::outputs"
-        echo "::set-output name=work_dir::${work_dir}"
-        echo "::set-output name=src_dir::$GITHUB_WORKSPACE/.start_py-youwol/${random}"
-        echo "::set-output name=shutdown_script::${work_dir}/py-youwol.shutdown.sh" 
+        echo "work_dir=${work_dir}" >> $GITHUB_OUTPUT
+        echo "src_dir=$GITHUB_WORKSPACE/.start_py-youwol/${random}" >> $GITHUB_OUTPUT
+        echo "shutdown_script=${work_dir}/py-youwol.shutdown.sh" >> $GITHUB_OUTPUT
         echo "::endgroup::"
       shell: sh
 
@@ -103,6 +103,6 @@ runs:
       run: |
         ### Log summary
         echo "::notice title=Start Py-Youwol::youwol/py-youwol@${src_ref} running with config ${config}"
-        echo "::set-output name=src_dir::${src_dir}"
-        echo "::set-output name=work_dir::${work_dir}"
+        echo "src_dir=${src_dir}" >> $GITHUB_OUTPUT
+        echo "work_dir=${work_dir}" >> $GITHUB_OUTPUT
       shell: sh

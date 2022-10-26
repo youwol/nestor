@@ -58,7 +58,7 @@ runs:
         ### Log summary & set action outputs
         name=$(jq -r -e ".name" package.json)
         version=$(jq -r -e ".version" package.json)
-        echo "::set-output name=name::${name}"
-        echo "::set-output name=version::${version}"
+        echo "name=${name}" >> $GITHUB_ACTION
+        echo "version=${version}" >> $GITHUB_ACTION
         echo "::notice title=Set up repository for job '${job_id}'::Project '${name}', version '${version}'"
       shell: bash

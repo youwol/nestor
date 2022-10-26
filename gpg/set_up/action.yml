@@ -19,8 +19,8 @@ runs:
         nestor_email: "nestor@youwol.com"
         nestor_name: "Nestor YouBot"
       run: |
-        echo "::set-output name=nestor_email::$nestor_email"
-        echo "::set-output name=nestor_name::$nestor_name"
+        echo "nestor_email=$nestor_email" >> $GITHUB_OUTPUT
+        echo "nestor_name=$nestor_name" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Set up GPG
@@ -51,8 +51,8 @@ runs:
         echo "::endgroup::"
         #
         echo "::group::Outputs GPG informations"
-        echo "::set-output name=gnupghome::$GNUPGHOME"
-        echo "::set-output name=nestor_signingkey::$fpr"
+        echo "gnupghome=$GNUPGHOME" >> $GITHUB_OUTPUT
+        echo "nestor_signingkey=$fpr" >> $GITHUB_OUTPUT
         echo "::endgroup::"
       shell: bash
 
@@ -81,5 +81,5 @@ runs:
         ### Log Summary and set action outputs
         message="Nestor set up to commit as « ${nestor_name} (${nestor_email}) » with GPG key ${nestor_signingkey}"
         echo "::notice title=Nestor Set Up::$message"
-        echo "::set-output name=gnupghome::$gnupghome"
+        echo "gnupghome=$gnupghome" >> $GITHUB_OUTPUT
       shell: sh

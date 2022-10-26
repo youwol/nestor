@@ -60,5 +60,5 @@ runs:
       run: |
         ### Update version
         yarn -s version --new-version ${target_version}
-        echo "::set-output name=tag::v${target_version}"
+        echo "tag=v${target_version}" >> $GITHUB_ACTION
       shell: sh

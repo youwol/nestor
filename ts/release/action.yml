@@ -74,7 +74,7 @@ runs:
         git add package.json
         git commit -m "🔖 start ${next_version}"
         echo "::endgroup::"
-        echo "::set-output name=version::${next_version}"
+        echo "version=${next_version}" >> $GITHUB_ACTION
       shell: sh
 
     - name: Fast-forward main to release tag and push
