@@ -4,7 +4,7 @@ inputs:
   src_ref:
     description: Git ref for py-youwol checkout
     required: false
-    default: master
+    default: main
   conf_ref:
     description: Git ref for integration-tests-conf checkout
     required: false

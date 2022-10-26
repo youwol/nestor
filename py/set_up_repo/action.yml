@@ -2,9 +2,9 @@ name: Set up a python package repository
 description: Set up a repository and install requirements.txt with pip
 inputs:
   ref:
-    description: "the ref to checkout (default to develop)"
+    description: "the ref to checkout (default to main)"
     required: false
-    default: develop
+    default: main
   path:
     description: "the path where to checkout"
     required: false

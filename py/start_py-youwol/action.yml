@@ -4,7 +4,7 @@ inputs:
   ref:
     description: Git ref for py-youwol checkout
     required: false
-    default: master
+    default: main
   config:
     description: Path to a py-youwol config file
     required: true
