@@ -1,0 +1,52 @@
+name: Run Typescript Tests with coverage
+description: Run Typescript tests with coverage
+author: jdecharne@youwol.com
+
+
+inputs:
+
+  on-failure:
+    description: >
+      What to do if tests failed :
+      - 'fatal' : the action failed
+      - 'warning' : issue a warning
+      Default to 'fatal'
+    default: 'fatal'
+
+
+outputs:
+
+  result:
+    description: Result of the tests
+    value: ${{ steps.yarn_test.outcome }}
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Check Parameters
+      id: check_params
+      if: inputs.on-failure != 'fatal' && inputs.on-failure != 'warning'
+      run: |
+        echo "::error title=Invalid parameter for ts/tests::'${{ inputs.on-failure }}' is invalid for on-failure, only 'fatal' or 'warning'." 
+        exit 1
+      shell: sh
+
+    - name: Yarn Coverage
+      id: yarn_coverage
+      run: yarn test-coverage || echo "failure=true" >> $GITHUB_OUTPUT
+      shell: sh
+
+    - name: Job Fail on failure
+      id: yarn_coverage_failure
+      if: steps.yarn_test.outputs.failure && inputs.on-failure == 'fatal'
+      uses: actions/github-script@v6
+      with:
+        script: core.setFailed("::error title=Tests failure for ${{ github.job }}::See job log")
+
+    - name: Warning on failure
+      id: yarn_coverage_warning
+      if: steps.yarn_test.outputs.failure && inputs.on-failure == 'warning'
+      run: echo "::warning title=Tests failure for ${{ github.job }}::Some tests failed, but action configured to only emit waring. See job log for details"
+      shell: sh
