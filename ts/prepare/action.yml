@@ -24,7 +24,9 @@ inputs:
     default: ${{ github.ref }}
 
   path:
-    description: "The final path of the local repository. Default to empty : the repository will not be moved once checkout"
+    description: >
+      The final path of the local repository. 
+      Default to empty : the repository will not be moved after checkout
     default: ''
 
 runs:

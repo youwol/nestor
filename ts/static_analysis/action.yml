@@ -18,20 +18,22 @@ runs:
 
     - name: Check code formatting with yarn prettier
       id: yarn_prettier
+      continue-on-error: true
+      run: yarn prettier --check .
+      shell: sh
+
+    - name: Prettier failure details
+      id: yarn_prettier_failure_details
+      if: steps.yarn_prettier.outcome == 'failure'
       run: |
-        # Yarn prettier
+        # Yarn prettier --list-different
         echo "::group::Yarn prettier logs"
-        if files=$(yarn -s prettier --list-different .) ; then
-          echo "::endgroup::"
-          echo "result=ok" >> $GITHUB_ACTION
-        else
-          echo $files
-          echo "::endgroup::"
-          title="Malformatted code source for job '${job_id}'"
-          echo "::warning title=${title}::See 'Yarn prettier logs' and/or annotations for details"
-          for file in ${files} ; do
-            echo "::warning file=${file},title=${title}::Mal-formatted file"
-          done
-          echo "result=ko" >> $GITHUB_ACTION
-        fi
+        files=$(yarn -s prettier --list-different .) && echo $files
+        echo "::endgroup::"
+        title="Malformatted code source"
+        echo "::error title=${title}::See annotations or job logs for details"
+        for file in ${files} ; do
+          echo "::error file=${file},title=${title}::Mal-formatted file"
+        done
+        exit 1
       shell: sh
