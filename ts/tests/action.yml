@@ -1,0 +1,50 @@
+name: Run Typescript Tests
+description: Run Typescript tests, into path if specified
+author: jdecharne@youwol.com
+
+
+inputs:
+
+  path:
+    description: >
+      The path of the Typescript repository where to execute tests.
+      Default to empty : tests will be executed into the workflow workspace
+    default: ''
+
+  on-failure:
+    description: >
+      What to do if tests failed :
+      - 'fatal' : the action failed
+      - 'warning' : issue a warning
+      Default to 'fatal'
+    default: 'fatal'
+
+
+outputs:
+
+  result:
+    description: Result of the tests, i.e 'ok' or 'ko'
+    value: ${{ steps.yarn_test.outputs.result }}
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Yarn Test
+      id: yarn_test
+      working-directory: ${{ inputs.path }}
+      run: |
+        # yarn test
+        echo "::group::yarn test"
+        if yarn test; then
+          echo "result=ok" >> $GITHUB_OUTPUT
+        else
+          echo "result=ko" >> $GITHUB_OUTPUT
+          echo "::warning title=Some tests failed::See job log"
+          if [ "${{ inputs.on-failure }}" == "fatal" ]; then
+            exit 1
+          fi
+        fi
+        echo "::endgroup::"
+      shell: sh
