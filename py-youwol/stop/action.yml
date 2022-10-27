@@ -34,15 +34,15 @@ runs:
     - name: Stop py-youwol
       id: stop_py-youwol
       working-directory: ${{ inputs.instance }}
-      run: |
-        # stop py-youwol coverage
-        echo "::group::run shutdown script"
-        sh py-youwol.shutdown.sh
-        echo "::endgroup::"
-        #
-        echo "::group::generate coverage HTML report"
-        COVERAGE_DEBUG_FILE=coverage_html.debug coverage html
-        echo "::endgroup::"
+      run: sh py-youwol.shutdown.sh
+      shell: sh
+
+    - name: Coverage HTML Report
+      id: coverage_html_report
+      working-directory: ${{ inputs.instance }}
+      env:
+        COVERAGE_DEBUG_FILE: coverage_html.debug
+      run: coverage html
       shell: sh
 
     - name: Upload artifacts

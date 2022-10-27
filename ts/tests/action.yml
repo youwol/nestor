@@ -23,28 +23,35 @@ inputs:
 outputs:
 
   result:
-    description: Result of the tests, i.e 'ok' or 'ko'
-    value: ${{ steps.yarn_test.outputs.result }}
+    description: Result of the tests
+    value: ${{ steps.yarn_test.outcome }}
 
 
 runs:
   using: composite
 
   steps:
+    - name: Check Parameters
+      id: check_params
+      if: inputs.on-failure != 'fatal' && inputs.on-failure != 'warning'
+      run: echo "::error title=Invalid parameter for ts/tests::'${{ inputs.on-failure }}' is invalid for on-failure."
+      shell: sh
+
     - name: Yarn Test
       id: yarn_test
       working-directory: ${{ inputs.path }}
-      run: |
-        # yarn test
-        echo "::group::yarn test"
-        if yarn test; then
-          echo "result=ok" >> $GITHUB_OUTPUT
-        else
-          echo "result=ko" >> $GITHUB_OUTPUT
-          echo "::warning title=Some tests failed::See job log"
-          if [ "${{ inputs.on-failure }}" == "fatal" ]; then
-            exit 1
-          fi
-        fi
-        echo "::endgroup::"
+      continue-on-error: true
+      run: yarn test
+      shell: sh
+
+    - name: Failure
+      id: yarn_test_failure
+      if: failure() && inputs.on-failure == 'fatal'
+      run: echo "::error title=Tests failure for ${{ github.job }}::See job log" ; exit 1
+      shell: sh
+
+    - name: Warning
+      id: yarn_test_warning
+      if: failure() && inputs.on-failure == 'warning'
+      run: echo "::warning title=Tests failure for ${{ github.job }}::See job log"
       shell: sh
