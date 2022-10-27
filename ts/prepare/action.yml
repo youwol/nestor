@@ -1,0 +1,84 @@
+name: Prepare Typescript Repository
+description: Prepare Typescript repository, optionally moving it to path outside workspace
+author: jdecharne@youwol.com
+
+
+inputs:
+
+  token:
+    description: >
+      Personal access token (PAT) for checkout
+      Default to the workflow token
+    default: ${{ github.token }}
+
+  repository:
+    description: >
+      Repository name with owner.
+      Default to the repository of the workflow
+    default: ${{ github.repository }}
+
+  ref:
+    description: >
+      Branch, tag or SHA to checkout. 
+      Default to the reference that triggered the workflow
+    default: ${{ github.ref }}
+
+  path:
+    description: "The final path of the local repository. Default to empty : the repository will not be moved once checkout"
+    default: ''
+
+runs:
+  using: composite
+
+  steps:
+    - name: Setup Action
+      id: setup_action
+      run: |
+        # Setup Action parameters
+        repo_string="${{ inputs.repository }}@${{ inputs.ref }}"
+        echo "repoString=$repo_string" >> $GITHUB_OUTPUT
+        if [ -n "${{ inputs.path }}" ]; then
+          random=$(awk 'BEGIN { srand(); print int(rand()*32768) }' /dev/null | base64)
+          checkout_path=".ts_prepare_${random}"
+          echo "::notice title=$repo_string::Preparing $repo_string in ${{ inputs.path }}"
+          echo "checkoutPath=${checkout_path}" >> $GITHUB_OUTPUT 
+          echo "lockFile=${checkout_path}/yarn.lock" >> $GITHUB_OUTPUT
+        else
+          echo "lockFile=yarn.lock" >> $GITHUB_OUTPUT
+        fi
+      shell: sh
+
+    - name: Checkout repository
+      id: checkout
+      uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repository }}
+        token: ${{ inputs.token }}
+        ref: ${{ inputs.ref }}
+        path: ${{ steps.setup_action.outputs.checkoutPath }}
+
+    - name: Setup Node.js
+      id: setup_node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+        cache: 'yarn'
+        cache-dependency-path: ${{ steps.setup_action.outputs.lockFile }}
+
+    - name: Yarn install
+      id: yarn_install
+      working-directory: ${{ steps.setup_action.outputs.checkoutPath }}
+      run: |
+        # yarn --frozen-lockfile
+        echo "::group::yarn output"
+        yarn --frozen-lockfile
+        echo "::endgroup::"
+      shell: sh
+
+    - name: Move repository
+      id: move
+      if: inputs.path != ''
+      run: |
+        # mv ${{ steps.setup_action.outputs.checkoutPath }} ${{ inputs.path }}
+        mv ${{ steps.setup_action.outputs.checkoutPath }} ${{ inputs.path }}
+      shell: sh
