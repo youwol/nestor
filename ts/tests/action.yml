@@ -34,7 +34,9 @@ runs:
     - name: Check Parameters
       id: check_params
       if: inputs.on-failure != 'fatal' && inputs.on-failure != 'warning'
-      run: echo "::error title=Invalid parameter for ts/tests::'${{ inputs.on-failure }}' is invalid for on-failure."
+      run: |
+        echo "::error title=Invalid parameter for ts/tests::'${{ inputs.on-failure }}' is invalid for on-failure." 
+        exit 1
       shell: sh
 
     - name: Yarn Test
@@ -46,12 +48,12 @@ runs:
 
     - name: Failure
       id: yarn_test_failure
-      if: failure() && inputs.on-failure == 'fatal'
+      if: steps.yarn_test.outcome == 'failure' && inputs.on-failure == 'fatal'
       run: echo "::error title=Tests failure for ${{ github.job }}::See job log" ; exit 1
       shell: sh
 
     - name: Warning
       id: yarn_test_warning
-      if: failure() && inputs.on-failure == 'warning'
+      if: steps.yarn_test.outcome == 'failure' && inputs.on-failure == 'warning'
       run: echo "::warning title=Tests failure for ${{ github.job }}::See job log"
       shell: sh
