@@ -37,10 +37,12 @@ fi
 
 # Py-Youwol sources
 if [ -n "$INPUTS_PATH" ]; then
-  # Sources are not in workspace
+  # Sources are already there
   echo "sources=$INPUTS_PATH" >> "$GITHUB_OUTPUT"
 else
-  echo "sources=./" >> "$GITHUB_OUTPUT"
+  # Sources will be checkout
+  echo "py-youwol-checkout=true" >> "$GITHUB_OUTPUT"
+  echo "sources=$RUNNER_TEMP/py-youwol_${random}" >> "$GITHUB_OUTPUT"
 fi
 
 echo "instance=${work_dir}" >> "$GITHUB_OUTPUT"

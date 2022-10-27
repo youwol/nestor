@@ -7,8 +7,8 @@ inputs:
 
   token:
     description: >
-      Personal access token (PAT) for checkout of conf_repository.
-      Only make sense if such a repository is configured
+      Personal access token (PAT) for checkout of configuration and py-youwol repositories.
+      Only make sense if such one or both of these repositories is checkout, ignored otherwise.
       Default to the workflow token
     default: ${{ github.token }}
 
@@ -21,7 +21,7 @@ inputs:
   conf_ref:
     description: >
       Branch, tag or SHA to checkout the configuration repository. 
-      Only make sense if such a repository is configured.
+      Only make sense if such a repository is configured, ignored otherwise
       Default to 'main'
     default: main
 
@@ -31,10 +31,17 @@ inputs:
       Either relative to conf_repository, or to workflow workspace if no conf_repository
     required: true
 
+  ref:
+    description: >
+      Branch, tag or SHA to checkout py-youwol repository. 
+      Only make sense if path is not configured, ignored otherwise.
+      Default to 'main'
+    default: main
+
   path:
     description: >
       The path of the local py-youwol repository.
-      Default to empty : the workflow workspace will be used
+      Default to empty : py-youwol repository will be checkout.
     default: ''
 
 outputs:
@@ -65,6 +72,16 @@ runs:
         INPUTS_PATH: ${{ inputs.path }}
       run: ${{ github.action_path }}/setup_action.sh
       shell: sh
+
+    - name: Prepare py-youwol repository
+      id: prepare_py-youwol
+      if: steps.setup_action.outputs.py-youwol-checkout
+      uses: youwol/nestor/py/prepare@v1
+      with:
+        repository: youwol/py-youwol
+        ref: ${{ inputs.ref }}
+        requirements: dev-requirements.txt
+        path: ${{ steps.setup_action.outputs.sources }}
 
     - name: Checkout configuration repository
       id: checkout_conf
