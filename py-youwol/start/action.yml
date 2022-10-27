@@ -1,0 +1,152 @@
+name: Start py-youwol
+description: Start py-youwol and output an abstract string instance
+author: jdecharne@youwol.com
+
+
+inputs:
+
+  token:
+    description: >
+      Personal access token (PAT) for checkout of conf_repository.
+      Only make sense if such a repository is configured
+      Default to the workflow token
+    default: ${{ github.token }}
+
+  conf_repository:
+    description: >
+      Repository name with owner for the configuration.
+      Default to empty : the configuration is taken from workflow workspace
+    default: ''
+
+  conf_ref:
+    description: >
+      Branch, tag or SHA to checkout the configuration repository. 
+      Only make sense if such a repository is configured.
+      Default to 'main'
+    default: main
+
+  conf_path:
+    description: >
+      Path to the configuration file to use.
+      Either relative to conf_repository, or to workflow workspace if no conf_repository
+    required: true
+
+  path:
+    description: >
+      The path of the local py-youwol repository.
+      Default to empty : the workflow workspace will be used
+    default: ''
+
+outputs:
+  instance:
+    description: >
+      An abstract string value, for youwol/nestor/py-youwol/stop action, i.e :
+      - uses: youwol/nestor/py-youwol/start@v1
+        id: start_py-youwol
+        with:
+          conf_repository: youwol/integration-tests-conf
+          conf_path: yw_config_IT.py
+      - uses: youwol/nestor/py-youwol/stop@v1
+        id: stop_py-youwol
+        with:
+          instance: steps.start_py-youwol.outputs.instance
+    value: ${{ steps.setup_action.outputs.workingDirectory }}
+
+
+runs:
+  using: composite
+
+  steps:
+    - name: Set Up Action
+      id: setup_action
+      run: |
+        # Set up action
+        random=$(awk 'BEGIN { srand(); print int(rand()*32768) }' /dev/null | base64)
+        # 
+        # Set up working directory
+        work_dir="$RUNNER_TEMP/py-youwol_start_working_dir_${random}"
+        mkdir -p "${work_dir}"
+        echo "workingDirectory=${work_dir}" >> $GITHUB_OUTPUT
+        #
+        # Set up coverage conf
+        cat  << _coverage_rc > "${work_dir}/.coveragerc"
+        [run]
+        branch = True
+        data_file = coverage.coverage
+        debug = sys,config
+        _coverage_rc
+        #
+        # Conf repository
+        if [ -n "${{ inputs.conf_repository }}" ]; then
+          checkout_path=".py-youwol_start_conf_${random}"
+          conf_dir="$RUNNER_TEMP/py-youwol_start_conf_${random}"
+          echo "confCheckoutPath=${checkout_path}" >> $GITHUB_OUTPUT 
+          echo "confDirectoryPath=${conf_dir}" >> $GITHUB_OUTPUT
+          echo "confPath=${conf_dir}/${{ inputs.conf_path }}" >> $GITHUB_OUTPUT
+        else
+          echo "confPath=${{ inputs.conf_path }}" >> $GITHUB_OUTPUT
+        fi
+        #
+        # Py-Youwol sources
+        if [ -n "${{ inputs.path }}" ]; then
+          echo "pythonPath=${{ inputs.path }}" >> $GITHUB_OUTPUT
+        else
+          echo "pythonPath=./" >> $GITHUB_OUTPUT
+        fi
+      shell: sh
+
+    - name: Checkout configuration repository
+      id: checkout_conf
+      if: inputs.conf_repository != ''
+      uses: actions/checkout@v3
+      with:
+        token: ${{ inputs.token }}
+        repository: ${{ inputs.conf_repository }}
+        ref: ${{ inputs.conf_ref }}
+        path: ${{ steps.setup_action.outputs.confCheckoutPath }}
+
+    - name: Move configuration
+      id: move_-conf
+      if: inputs.conf_repository != ''
+      run: |
+        # mv ${{ steps.setup_action.outputs.confCheckoutPath }} ${{ steps.setup_action.outputs.confDirectoryPath}}
+        mv ${{ steps.setup_action.outputs.confCheckoutPath }} ${{ steps.setup_action.outputs.confDirectoryPath}}
+      shell: sh
+
+    - name: Start py-youwol
+      id: start_py-youwol
+      working-directory: ${{ steps.setup_action.outputs.workingDirectory }}
+      env:
+        PYTHONPATH: ${{ steps.setup_action.outputs.pythonPath }}
+        conf: ${{ steps.setup_action.outputs.confPath }}
+      run: |
+        # launch py-youwol with coverage
+        echo "::group::start py-youwol"
+        COVERAGE_DEBUG_FILE=coverage_run.debug coverage run "${PYTHONPATH}/youwol/main.py" --conf "${conf}" --daemonize
+        echo "::endgroup::"
+      shell: sh
+
+    - name: Wait for py-youwol readiness
+      id: wait_py-youwol
+      working-directory: ${{ steps.setup_action.outputs.workingDirectory }}
+      run: |
+        # wait for py-youwol readiness
+        echo "::group::Trying at most 10 times to call healtz endpoint, waiting 1 seconde between retries"
+        jq_cmd='if .status == "py-youwol ok" then halt else error ("incorrect status from py-youwol") end'
+        for try in $(seq 1 1 10); do
+          echo "try $try/10 to contact py-youwol instance"
+          response=$(curl --silent 'http://localhost:2001/healthz' || echo "No response")
+          if echo "${response}" | jq -e "${jq_cmd}"; then
+            echo "Success : py-youwol is ready"
+            echo "::endgroup::"
+            exit 0
+          else
+            echo "Invalid response '${response}'."
+            echo "Retrying in 1 second"
+            sleep 1
+          fi
+        done
+        echo "::endgroup::"
+        echo "::error::Failed to contact py-youwol instance after 10 seconds"
+        exit 1
+      shell: sh
