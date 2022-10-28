@@ -2,38 +2,51 @@ name: Static analyzes a Typescript repository
 description: Various quality checks for Typescript packages
 author: jdecharne@youwol.com
 
+outputs:
+  result:
+    description: set to 'failure' if any analyse failed
+    value: ${{ steps.summary.outputs.result }}
+
 runs:
   using: composite
 
   steps:
     - name: Audit dependencies
       id: yarn_audit
-      run: yarn audit
+      run: yarn -s audit || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code quality with yarn eslint
       id: yarn_eslint
-      run: yarn eslint
+      run: yarn -s eslint --quiet -f unix . || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code formatting with yarn prettier
       id: yarn_prettier
       continue-on-error: true
-      run: yarn prettier --check .
+      run: yarn -s prettier --check . || echo "result=failure" >> $GITHUB_OUTPUT
+      shell: sh
+
+    - name: Audit Failure
+      id: yarn_audit_failure
+      if: steps.yarn_audit.outputs.result == 'failure'
+      run: echo "::error title=Audit Failure::Yarn audit has failed. Run yarn audit locally or see Dependabot alerts"
+      shell: sh
+
+    - name: Eslint Failure details
+      id: yarn_eslint_failure_details
+      if: steps.yarn_eslint.outputs.result == 'failure'
+      run: ${{ github.action_path }}/eslint_details.sh
       shell: sh
 
     - name: Prettier failure details
       id: yarn_prettier_failure_details
-      if: steps.yarn_prettier.outcome == 'failure'
-      run: |
-        # Yarn prettier --list-different
-        echo "::group::Yarn prettier logs"
-        files=$(yarn -s prettier --list-different .) && echo $files
-        echo "::endgroup::"
-        title="Malformatted code source"
-        echo "::error title=${title}::See annotations or job logs for details"
-        for file in ${files} ; do
-          echo "::error file=${file},title=${title}::Mal-formatted file"
-        done
-        exit 1
+      if: steps.yarn_prettier.outputs.result == 'failure'
+      run: ${{ github.action_path }}/prettier_details.sh
+      shell: sh
+
+    - name: Summary
+      id: summary
+      if: steps.yarn_audit.outputs.result == 'failure' || steps.yarn_eslint.outputs.result == 'failure' || steps.yarn_prettier.outputs.result == 'failure'
+      run: echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
