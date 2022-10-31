@@ -36,13 +36,15 @@ runs:
     - name: Eslint Failure details
       id: yarn_eslint_failure_details
       if: steps.yarn_eslint.outputs.result == 'failure'
-      run: '${{ github.action_path }}'/eslint_details.sh
+      run: >
+        '${{ github.action_path }}'/eslint_details.sh
       shell: sh
 
     - name: Prettier failure details
       id: yarn_prettier_failure_details
       if: steps.yarn_prettier.outputs.result == 'failure'
-      run: '${{ github.action_path }}'/prettier_details.sh
+      run: >
+        '${{ github.action_path }}'/prettier_details.sh
       shell: sh
 
     - name: Summary
