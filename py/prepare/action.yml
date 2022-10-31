@@ -80,11 +80,11 @@ runs:
     - name: Install py-youwol dependencies
       id: install_py-youwol_dep
       working-directory: ${{ steps.setup_action.outputs.checkoutPath }}
-      run: pip install -r ${{ inputs.requirements }}
+      run: pip install -r '${{ inputs.requirements }}'
       shell: sh
 
     - name: Move repository
       id: move
       if: inputs.path != ''
-      run: mv ${{ steps.setup_action.outputs.checkoutPath }} ${{ inputs.path }}
+      run: mv '${{ steps.setup_action.outputs.checkoutPath }}' '${{ inputs.path }}'
       shell: sh

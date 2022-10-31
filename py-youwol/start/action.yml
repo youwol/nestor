@@ -70,7 +70,7 @@ runs:
         INPUTS_CONF_REPOSITORY: ${{ inputs.conf_repository }}
         INPUTS_CONF_PATH: ${{ inputs.conf_path }}
         INPUTS_PATH: ${{ inputs.path }}
-      run: ${{ github.action_path }}/setup_action.sh
+      run: '${{ github.action_path }}'/setup_action.sh
       shell: sh
 
     - name: Prepare py-youwol repository
@@ -96,7 +96,7 @@ runs:
     - name: Move configuration
       id: move_-conf
       if: inputs.conf_repository != ''
-      run: mv ${{ steps.setup_action.outputs.conf-checkout-path }} ${{ steps.setup_action.outputs.conf-directory }}
+      run: mv '${{ steps.setup_action.outputs.conf-checkout-path }}' '${{ steps.setup_action.outputs.conf-directory }}'
       shell: sh
 
     - name: Start py-youwol
@@ -112,7 +112,7 @@ runs:
 
     - name: Wait for py-youwol readiness
       id: wait_py-youwol
-      run: ${{ github.action_path }}/wait_py-youwol.sh
+      run: '${{ github.action_path }}'/wait_py-youwol.sh
       shell: sh
 
     - name: Upload logs on failure
