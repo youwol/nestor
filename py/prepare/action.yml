@@ -29,6 +29,12 @@ inputs:
       Default to requirements.txt
     default: 'requirements.txt'
 
+  python-version:
+    description: >
+      Python version to use.
+      Default to 3.9
+    default: '3.9'
+
   path:
     description: "The final path of the local repository. Default to empty : the repository will not be moved once checkout"
     default: ''
@@ -67,7 +73,7 @@ runs:
       id: setup_python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: ${{ inputs.python-version }}
         cache: 'pip'
         cache-dependency-path: ${{ steps.setup_action.outputs.requirementsPath }}
 
