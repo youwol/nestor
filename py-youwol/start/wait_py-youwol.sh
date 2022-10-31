@@ -20,4 +20,4 @@ done
 # If execution flow is here, something went wrong
 echo "::endgroup::"
 echo "::error::Failed to contact py-youwol instance after 10 seconds"
-exit 1
+echo "result=failure" >> "$GITHUB_OUTPUT"

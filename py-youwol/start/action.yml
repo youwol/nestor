@@ -114,3 +114,19 @@ runs:
       id: wait_py-youwol
       run: ${{ github.action_path }}/wait_py-youwol.sh
       shell: sh
+
+    - name: Upload logs on failure
+      id: upload_logs
+      if: steps.wait_py-youwol.outputs.result == 'failure'
+      uses: actions/upload-artifact@v3
+      with:
+        name: py-youwol-failed-to-start
+        path: ${{ steps.setup_action.outputs.instance }}
+
+    - name: On Failure
+      id: on_failure
+      if:  steps.wait_py-youwol.outputs.result == 'failure'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          core.setFailed("Job failed because py-youwol failed to start, see job logs and annotations.") 
