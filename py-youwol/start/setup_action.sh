@@ -15,7 +15,8 @@ cat  << _coverage_rc > "${coveragerc_path}"
 [run]
 branch = True
 data_file = coverage.coverage
-debug = sys,config
+relative_files = True
+debug = sys,config,pathmap
 _coverage_rc
 
 ## Actions parameters
