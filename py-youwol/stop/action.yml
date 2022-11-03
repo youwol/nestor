@@ -37,6 +37,28 @@ runs:
       run: sh py-youwol.shutdown.sh
       shell: sh
 
+    - name: Coverage HTML Report
+      id: coverage_html_report
+      working-directory: ${{ inputs.instance }}
+      env:
+        COVERAGE_DEBUG_FILE: coverage_html.debug
+      run: |
+        title="Coverage report HTML"
+        msg="HTML report generation failed. See job logs"
+        coverage html > coverage_html.log 2>&1 || echo "::error title=$title::$msg"
+      shell: sh
+
+    - name: Coverage XML Report
+      id: coverage_xml_report
+      working-directory: ${{ inputs.instance }}
+      env:
+        COVERAGE_DEBUG_FILE: coverage_xml.debug
+      run: |
+        title="Coverage report XML"
+        msg="XML report generation failed. See job logs"
+        coverage xml > coverage_xml.log 2>&1 || echo "::error title=$title::$msg"
+      shell: sh
+
     - name: Upload artifacts
       id: upload_artifacts
       uses: actions/upload-artifact@v3
@@ -47,3 +69,9 @@ runs:
           ${{ inputs.instance }}/py-youwol.log
           ${{ inputs.instance }}/coverage.debug
           ${{ inputs.instance }}/coverage.coverage
+          ${{ inputs.instance }}/coverage_html.debug
+          ${{ inputs.instance }}/coverage_html.log
+          ${{ inputs.instance }}/htmlcov
+          ${{ inputs.instance }}/coverage_xml.debug
+          ${{ inputs.instance }}/coverage_xml.log
+          ${{ inputs.instance }}/coverage.xml
