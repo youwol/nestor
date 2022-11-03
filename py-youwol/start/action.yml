@@ -44,6 +44,12 @@ inputs:
       Default to empty : py-youwol repository will be checkout.
     default: ''
 
+  coverage_omit:
+    description: >
+      Pattern for coverage '[run] omit' configuration
+      Default to empty
+    default: ''
+
 outputs:
   instance:
     description: >
@@ -105,13 +111,14 @@ runs:
       working-directory: ${{ steps.setup_action.outputs.sources }}
       run: |
         cat  << _coverage_rc > .coveragerc
-          [run]
-          branch = True
-          data_file = coverage.coverage
-          relative_files = True
-          debug = sys,config,pathmap
-          omit =
-            ${{ steps.setup_action.outputs.config }}
+        [run]
+        branch = True
+        data_file = coverage.coverage
+        relative_files = True
+        debug = sys,config,pathmap
+        omit =
+          ${{ steps.setup_action.outputs.config }}
+          ${{ inputs.coverage_omit }}
         _coverage_rc
       shell: sh
 
@@ -124,10 +131,7 @@ runs:
         COVERAGE_DEBUG_FILE: coverage.debug
         PY_YOUWOL_MAIN_SCRIPT: youwol/main.py
         PY_YOUWOL_CONFIG: ${{ steps.setup_action.outputs.config }}
-      run: |
-        pwd
-        ls -lstra
-        cat .coveragerc || echo "::error::no coverage rc"
+      run: >
         PYTHONPATH=./ coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh
 

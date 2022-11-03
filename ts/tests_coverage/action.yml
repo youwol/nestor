@@ -59,6 +59,12 @@ inputs:
       Default to 'main'
     default: main
 
+  coverage_omit:
+    description: >
+      Pattern for coverage '[run] omit' configuration
+      Default to empty
+    default: ''
+
 outputs:
 
   result:
@@ -81,6 +87,7 @@ runs:
           conf_repository: ${{ inputs.py-youwol_conf_repository }}
           conf_ref: ${{ inputs.py-youwol_conf_ref }}
           conf_path: ${{ inputs.py-youwol_conf_path }}
+          coverage_omit: ${{ inputs.coverage_omit }}
 
     - name: Tests with coverage
       id: tests_coverage
