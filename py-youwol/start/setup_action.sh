@@ -4,20 +4,9 @@
 random=$(awk 'BEGIN { srand(); print int(rand()*32768) }' /dev/null | base64)
 
 # Variables definition
-work_dir="${RUNNER_TEMP}/py-youwol_start_working_dir_${random}"
-coveragerc_path="${work_dir}/.coveragerc"
-
-# Set up working directory
-mkdir -p "${work_dir}"
-
-# Set up coverage conf
-cat  << _coverage_rc > "${coveragerc_path}"
-[run]
-branch = True
-data_file = coverage.coverage
-relative_files = True
-debug = sys,config,pathmap
-_coverage_rc
+config=$INPUTS_CONF_PATH
+sources=$INPUTS_PATH
+py_youwol_checkout="false"
 
 ## Actions parameters
 
@@ -26,27 +15,24 @@ if [ -n "$INPUTS_CONF_REPOSITORY" ]; then
   # If using a conf repository, output its checkout, its directory and a config path inside
   checkout_path=".py-youwol_start_conf_${random}"
   conf_dir="$RUNNER_TEMP/py-youwol_start_conf_${random}"
-  {
-    echo "conf-checkout-path=${checkout_path}"
-    echo "conf-directory=${conf_dir}"
-    echo "config=${conf_dir}/$INPUTS_CONF_PATH"
-  } >> "$GITHUB_OUTPUT"
-else
-  # Not using a conf repository, config path is relative to workspace
-  echo "config=$INPUTS_CONF_PATH" >> "$GITHUB_OUTPUT"
+  config="${conf_dir}/$INPUTS_CONF_PATH"
 fi
 
 # Py-Youwol sources
-if [ -n "$INPUTS_PATH" ]; then
-  # Sources are already there
-  echo "sources=$INPUTS_PATH" >> "$GITHUB_OUTPUT"
-else
+if [ -z "${sources}" ]; then
   # Sources will be checkout
-  echo "py-youwol-checkout=true" >> "$GITHUB_OUTPUT"
-  echo "sources=$RUNNER_TEMP/py-youwol_${random}" >> "$GITHUB_OUTPUT"
+  py_youwol_checkout="true"
+  sources="$RUNNER_TEMP/py-youwol_${random}"
 fi
 
-echo "instance=${work_dir}" >> "$GITHUB_OUTPUT"
+## Set Step outputs
+{
+  echo "conf-checkout-path=${checkout_path}"
+  echo "conf-directory=${conf_dir}"
+  echo "config=${config}"
+  echo "sources=${sources}"
+  echo "py-youwol_checkout=${py_youwol_checkout}"
+} >> "$GITHUB_OUTPUT"
 
 ## Summary
 echo "action outputs :"

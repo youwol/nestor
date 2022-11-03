@@ -73,7 +73,7 @@ runs:
     - name: Start py-youwol
       id: start_py-youwol
       if: inputs.py-youwol_conf_path
-      uses: youwol/nestor/py-youwol/start@v1
+      uses: youwol/nestor/py-youwol/start@test
       with:
           token: ${{ inputs.token }}
           path: ${{ inputs.py-youwol_path }}
@@ -91,7 +91,7 @@ runs:
     - name: Stop py-youwol
       id: stop_py-youwol
       if: inputs.py-youwol_conf_path
-      uses: youwol/nestor/py-youwol/stop@v1
+      uses: youwol/nestor/py-youwol/stop@test
       with:
         instance: ${{ steps.start_py-youwol.outputs.instance }}
         artifact: py-youwol_log_${{ inputs.artifacts_suffix }}

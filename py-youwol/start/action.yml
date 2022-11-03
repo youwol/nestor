@@ -57,7 +57,7 @@ outputs:
         id: stop_py-youwol
         with:
           instance: steps.start_py-youwol.outputs.instance
-    value: ${{ steps.setup_action.outputs.instance }}
+    value: ${{ steps.setup_action.outputs.sources }}
 
 
 runs:
@@ -76,7 +76,7 @@ runs:
 
     - name: Prepare py-youwol repository
       id: prepare_py-youwol
-      if: steps.setup_action.outputs.py-youwol-checkout
+      if: steps.setup_action.outputs.py-youwol_checkout == 'true'
       uses: youwol/nestor/py/prepare@v1
       with:
         repository: youwol/py-youwol
@@ -100,15 +100,35 @@ runs:
       run: mv '${{ steps.setup_action.outputs.conf-checkout-path }}' '${{ steps.setup_action.outputs.conf-directory }}'
       shell: sh
 
+    - name: Create Coverage config
+      id: create_coverage_config
+      working-directory: ${{ steps.setup_action.outputs.sources }}
+      run: |
+        cat  << _coverage_rc > .coveragerc
+          [run]
+          branch = True
+          data_file = coverage.coverage
+          relative_files = True
+          debug = sys,config,pathmap
+          omit =
+            ${{ steps.setup_action.outputs.config }}
+        _coverage_rc
+      shell: sh
+
+
     - name: Start py-youwol
       id: start_py-youwol
-      working-directory: ${{ steps.setup_action.outputs.instance }}
+      working-directory: ${{ steps.setup_action.outputs.sources }}
+      continue-on-error: true
       env:
-        PYTHONPATH: ${{ steps.setup_action.outputs.sources }}
-        COVERAGE_DEBUG_FILE: coverage.coverage
-        PY_YOUWOL_MAIN_SCRIPT: ${{ steps.setup_action.outputs.sources }}/youwol/main.py
+        COVERAGE_DEBUG_FILE: coverage.debug
+        PY_YOUWOL_MAIN_SCRIPT: youwol/main.py
         PY_YOUWOL_CONFIG: ${{ steps.setup_action.outputs.config }}
-      run: coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
+      run: |
+        pwd
+        ls -lstra
+        cat .coveragerc || echo "::error::no coverage rc"
+        PYTHONPATH=./ coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh
 
     - name: Wait for py-youwol readiness
@@ -123,7 +143,7 @@ runs:
       uses: actions/upload-artifact@v3
       with:
         name: py-youwol-failed-to-start
-        path: ${{ steps.setup_action.outputs.instance }}
+        path: ${{ steps.setup_action.outputs.sources }}/py-youwol.log
 
     - name: On Failure
       id: on_failure
