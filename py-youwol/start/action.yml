@@ -50,6 +50,15 @@ inputs:
       Default to empty
     default: ''
 
+  USERNAME_INTEGRATION_TESTS:
+    description: ""
+  PASSWORD_INTEGRATION_TESTS:
+    description: ""
+  USERNAME_INTEGRATION_TESTS_BIS:
+    description: ""
+  PASSWORD_INTEGRATION_TESTS_BIS:
+    description: ""
+
 outputs:
   instance:
     description: >
@@ -131,6 +140,10 @@ runs:
         COVERAGE_DEBUG_FILE: coverage.debug
         PY_YOUWOL_MAIN_SCRIPT: youwol/main.py
         PY_YOUWOL_CONFIG: ${{ steps.setup_action.outputs.config }}
+        USERNAME_INTEGRATION_TESTS: ${{ inputs.USERNAME_INTEGRATION_TESTS }}
+        PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
+        USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
+        PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
       run: >
         PYTHONPATH=./ coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh

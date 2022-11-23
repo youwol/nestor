@@ -65,6 +65,15 @@ inputs:
       Default to empty
     default: ''
 
+  USERNAME_INTEGRATION_TESTS:
+    description: ""
+  PASSWORD_INTEGRATION_TESTS:
+    description: ""
+  USERNAME_INTEGRATION_TESTS_BIS:
+    description: ""
+  PASSWORD_INTEGRATION_TESTS_BIS:
+    description: ""
+
 outputs:
 
   result:
@@ -88,6 +97,10 @@ runs:
           conf_ref: ${{ inputs.py-youwol_conf_ref }}
           conf_path: ${{ inputs.py-youwol_conf_path }}
           coverage_omit: ${{ inputs.coverage_omit }}
+          USERNAME_INTEGRATION_TESTS: ${{ inputs.USERNAME_INTEGRATION_TESTS }}
+          PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
+          USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
+          PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
 
     - name: Tests with coverage
       id: tests_coverage
