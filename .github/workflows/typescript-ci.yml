@@ -23,7 +23,7 @@ jobs:
           script: core.setFailed("Job failed because static analysis has failed, see job logs and annotations.")
 
   build:
-    name: Build
+    name: Build & Tests
     runs-on: ubuntu-latest
     steps:
       - name: Prepare repository
@@ -50,6 +50,11 @@ jobs:
         run: yarn build || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
 
+      - name: Test
+        id: test
+        run: yarn test || echo "result=failure" >> $GITHUB_OUTPUT
+        shell: sh
+
       - name: Check repository cleanness
         id: git_cleanness
         run: |
@@ -70,6 +75,13 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: core.setFailed("Job failed because build failed, see job logs and annotations.")
+
+      - name: On Test Failure
+        id: test_failure
+        if: steps.test.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because some tests failed, see job logs and annotations.")
 
       - name: On Repository dirty
         id: git_cleanness_dirty
