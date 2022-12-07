@@ -1,0 +1,79 @@
+name: Continuous Integration
+
+on: workflow_call
+
+jobs:
+  static_analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v1
+
+      - name: Static Analysis
+        id: static_analysis
+        uses: youwol/nestor/ts/static_analysis@v1
+
+      - name: On Static Analysis Failure
+        id: static_analysis_failure
+        if: steps.static_analysis.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because static analysis has failed, see job logs and annotations.")
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v1
+
+      - name: Prepare py-youwol repository
+        id: prepare_py-youwol
+        uses: youwol/nestor/py/prepare@v1
+        with:
+          repository: youwol/py-youwol
+          ref: main
+          path: ${{ runner.temp }}/py-youwol
+
+      - name: Py-youwol templating
+        id: autogen
+        env:
+          PYTHONPATH: ${{ runner.temp }}/py-youwol
+        run: yarn auto-gen || echo "result=failure" >> $GITHUB_OUTPUT
+        shell: sh
+
+      - name: Build
+        id: build
+        run: yarn build || echo "result=failure" >> $GITHUB_OUTPUT
+        shell: sh
+
+      - name: Check repository cleanness
+        id: git_cleanness
+        run: |
+          git_status=$(git status -s)
+          [ -z "$git_status" ] || ( echo "$git_status" ; echo "result=failure" >> $GITHUB_OUTPUT )
+        shell: sh
+
+      - name: On Py-youwol templating Failure
+        id: autogen_failure
+        if: steps.autogen.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because py-youwol templating failed, see job logs and annotations.")
+
+      - name: On Build Failure
+        id: build_failure
+        if: steps.build.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because build failed, see job logs and annotations.")
+
+      - name: On Repository dirty
+        id: git_cleanness_dirty
+        if: steps.git_cleanness.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because some files were modified or untracked, see job logs and annotations.")
