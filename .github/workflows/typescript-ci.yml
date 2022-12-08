@@ -50,6 +50,12 @@ jobs:
         run: yarn build || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
 
+      - name: Documentation
+        if: not(contains(inputs.skip, 'doc'))
+        id: doc
+        run: yarn doc || echo "result=failure" >> $GITHUB_OUTPUT
+        shell: sh
+
       - name: Test
         id: test
         run: yarn test || echo "result=failure" >> $GITHUB_OUTPUT
@@ -75,6 +81,13 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: core.setFailed("Job failed because build failed, see job logs and annotations.")
+
+      - name: On Documentation Failure
+        id: doc_failure
+        if: steps.doc.outputs.result == 'failure'
+        uses: actions/github-script@v6
+        with:
+          script: core.setFailed("Job failed because documentation generation failed, see job logs and annotations.")
 
       - name: On Test Failure
         id: test_failure
