@@ -59,19 +59,19 @@ runs:
     - name: Warn about skipping audit
       id: warn_skip_audit
       if: contains(inputs.skip, 'audit')
-      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn audit."
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn audit."
       shell: sh
 
     - name: Warn about skipping eslint
       id: warn_skip_eslint
       if: contains(inputs.skip, 'eslint')
-      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn eslint ."
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn eslint ."
       shell: sh
 
     - name: Warn about skipping prettier
       id: warn_skip_prettier
       if: contains(inputs.skip, 'prettier')
-      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn prettier --check ."
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn prettier --check ."
       shell: sh
 
     - name: Summary
