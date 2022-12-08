@@ -6,8 +6,14 @@ on:
       skip:
         type: string
         description: |
-          List of checks to skip, among audit, eslint, prettier
+          List of checks to skip, among audit, eslint, prettier, autogen, build, doc, test, cleanness
         default: ''
+        required: false
+      pipeline:
+        type: boolean
+        description: |
+          Use py-youwol pipeline
+        default: true
         required: false
 
 jobs:
@@ -41,6 +47,7 @@ jobs:
         uses: youwol/nestor/ts/prepare@v1
 
       - name: Prepare py-youwol repository
+        if: ${{ inputs.pipeline }}
         id: prepare_py-youwol
         uses: youwol/nestor/py/prepare@v1
         with:
@@ -49,6 +56,7 @@ jobs:
           path: ${{ runner.temp }}/py-youwol
 
       - name: Py-youwol templating
+        if: "${{ inputs.pipeline }} && ! contains(inputs.skip, 'autogen')"
         id: autogen
         env:
           PYTHONPATH: ${{ runner.temp }}/py-youwol
@@ -56,21 +64,25 @@ jobs:
         shell: sh
 
       - name: Build
+        if: "! contains(inputs.skip, 'build')"
         id: build
         run: yarn build || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
 
       - name: Documentation
+        if: "! contains(inputs.skip, 'doc')"
         id: doc
         run: yarn doc || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
 
       - name: Test
+        if: "! contains(inputs.skip, 'test')"
         id: test
         run: yarn test || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
 
       - name: Check repository cleanness
+        if: "! contains(inputs.skip, 'cleanness')"
         id: git_cleanness
         run: |
           git_status=$(git status -s)
