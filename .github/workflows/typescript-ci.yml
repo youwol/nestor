@@ -77,7 +77,7 @@ jobs:
         uses: youwol/nestor/ts/prepare@v1
 
       - name: Prepare py-youwol repository
-        if: ${{ inputs.pipeline }}
+        if: inputs.pipeline
         id: prepare_py-youwol
         uses: youwol/nestor/py/prepare@v1
         with:
@@ -86,7 +86,7 @@ jobs:
           path: ${{ runner.temp }}/py-youwol
 
       - name: Py-youwol templating
-        if: "${{ inputs.pipeline }} && ! contains(inputs.skip, 'autogen')"
+        if: "inputs.pipeline && ! contains(inputs.skip, 'autogen')"
         id: autogen
         env:
           PYTHONPATH: ${{ runner.temp }}/py-youwol
