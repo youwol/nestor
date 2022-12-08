@@ -42,6 +42,36 @@ jobs:
     name: Build & Tests
     runs-on: ubuntu-latest
     steps:
+      - name: Warn about skipping autogen
+        id: warn_skip_autogen
+        if: contains(inputs.skip, 'autogen')
+        run: echo "::warn title=Build & Test::Job parametrized to skip yarn auto-gen."
+        shell: sh
+
+      - name: Warn about skipping build
+        id: warn_skip_build
+        if: contains(inputs.skip, 'build')
+        run: echo "::warn title=Build & Test::Job parametrized to skip yarn build."
+        shell: sh
+
+      - name: Warn about skipping doc
+        id: warn_skip_doc
+        if: contains(inputs.skip, 'doc')
+        run: echo "::warn title=Build & Test::Job parametrized to skip yarn doc."
+        shell: sh
+
+      - name: Warn about skipping test
+        id: warn_skip_test
+        if: contains(inputs.skip, 'test')
+        run: echo "::warn title=Build & Test::Job parametrized to skip yarn test."
+        shell: sh
+
+      - name: Warn about skipping git cleanness check
+        id: warn_skip_git_cleanness
+        if: contains(inputs.skip, 'cleanness')
+        run: echo "::warn title=Build & Test::Job parametrized to skip git cleanness check."
+        shell: sh
+
       - name: Prepare repository
         id: prepare
         uses: youwol/nestor/ts/prepare@v1
