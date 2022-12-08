@@ -1,6 +1,14 @@
 name: Continuous Integration
 
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      skip:
+        type: string
+        description: |
+          List of checks to skip, among audit, eslint, prettier
+        default: ''
+        required: false
 
 jobs:
   static_analysis:
@@ -14,6 +22,8 @@ jobs:
       - name: Static Analysis
         id: static_analysis
         uses: youwol/nestor/ts/static_analysis@v1
+        with:
+          skip: ${{ inputs.skip }}
 
       - name: On Static Analysis Failure
         id: static_analysis_failure
@@ -51,7 +61,6 @@ jobs:
         shell: sh
 
       - name: Documentation
-        if: not(contains(inputs.skip, 'doc'))
         id: doc
         run: yarn doc || echo "result=failure" >> $GITHUB_OUTPUT
         shell: sh
