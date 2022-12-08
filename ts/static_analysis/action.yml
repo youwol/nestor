@@ -2,6 +2,12 @@ name: Static analyzes a Typescript repository
 description: Various quality checks for Typescript packages
 author: jdecharne@youwol.com
 
+inputs:
+  skip:
+    description: |
+      List of check to skip, among audit, eslint, prettier
+    default: ""
+
 outputs:
   result:
     description: set to 'failure' if any analyse failed
@@ -13,16 +19,19 @@ runs:
   steps:
     - name: Audit dependencies
       id: yarn_audit
+      if: "! contains(inputs.skip, 'audit')"
       run: yarn -s audit || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code quality with yarn eslint
       id: yarn_eslint
+      if: "! contains(inputs.skip, 'eslint')"
       run: yarn -s eslint --quiet -f unix . || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code formatting with yarn prettier
       id: yarn_prettier
+      if: "! contains(inputs.skip, 'prettier')"
       continue-on-error: true
       run: yarn -s prettier --check . || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
@@ -45,6 +54,24 @@ runs:
       if: steps.yarn_prettier.outputs.result == 'failure'
       run: >
         '${{ github.action_path }}'/prettier_details.sh
+      shell: sh
+
+    - name: Warn about skipping audit
+      id: warn_skip_audit
+      if: contains(inputs.skip, 'audit')
+      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn audit."
+      shell: sh
+
+    - name: Warn about skipping eslint
+      id: warn_skip_eslint
+      if: contains(inputs.skip, 'eslint')
+      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn eslint ."
+      shell: sh
+
+    - name: Warn about skipping prettier
+      id: warn_skip_prettier
+      if: contains(inputs.skip, 'prettier')
+      run: echo "::warn title=Static Analysis::Job parametrized to skip yarn prettier --check ."
       shell: sh
 
     - name: Summary
