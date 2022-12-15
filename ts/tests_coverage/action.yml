@@ -105,7 +105,8 @@ runs:
     - name: Tests with coverage
       id: tests_coverage
       working-directory: ${{ inputs.path }}
-      run: yarn -s test-coverage --reporters=github-actions || echo "result=failure" >> $GITHUB_OUTPUT
+      run: |
+        yarn -s test-coverage --reporters=default --reporters=github-actions || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Stop py-youwol
