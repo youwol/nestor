@@ -1,165 +1,81 @@
-name: Static analyzes a typescript package
-description: Various quality checks for typescript packages, optionnaly uploading analysis artefacts
-inputs:
-  archive:
-    description: "artefacts archive name"
-    required: false
-    default: 'static_analysis'
-  ignore:
-    description: "list of analysis failures to ignore (audit prettier eslint)"
-    required: false
-    default: ''
-outputs:
-  ignored:
-    description: "list of analysis failures ignored"
-    value: ${{ steps.summary.outputs.ignored }}
+name: Static analyzes a Typescript repository
+description: Various quality checks for Typescript packages
+author: jdecharne@youwol.com
 
+inputs:
+  skip:
+    description: |
+      List of check to skip, among audit, eslint, prettier
+    default: ""
+
+outputs:
+  result:
+    description: set to 'failure' if any analyse failed
+    value: ${{ steps.summary.outputs.result }}
 
 runs:
   using: composite
 
   steps:
-    - name: Prepare artefact directory
-      id: prepare_dir
-      run: |
-        [ -d dist ] || mkdir dist
-      shell: sh
-
     - name: Audit dependencies
       id: yarn_audit
-      env:
-        job_id: ${{ github.job }}
-      run: |
-        # Yarn audit
-        if yarn -s audit --json > dist/audit.json; then
-          echo "result=ok" >> $GITHUB_ACTION
-        else
-          title="Security issues in dependencies for job '${job_id}'"
-          echo "::group::Yarn auditing report"
-          yarn audit || true
-          echo "::endgroup::"
-          echo "::warning title=${title}::See 'Yarn auditing report' in logs and audit.json for details"
-          echo "result=ko" >> $GITHUB_ACTION
-        fi
+      if: "! contains(inputs.skip, 'audit')"
+      run: yarn -s audit || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code quality with yarn eslint
       id: yarn_eslint
-      env:
-        job_id: ${{ github.job }}
-      run: |
-        # Yarn eslint
-        if yarn -s eslint --format html --output-file dist/eslint.html . ; then
-          echo "result=ok" >> $GITHUB_ACTION
-        else
-          title="Code-quality concerns for job '${job_id}'"
-          echo "::warning title=${title}::See logs and eslint.html for details"
-          echo "result=ko" >> $GITHUB_ACTION
-        fi
+      if: "! contains(inputs.skip, 'eslint')"
+      run: yarn -s eslint --quiet -f unix . || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
     - name: Check code formatting with yarn prettier
       id: yarn_prettier
-      env:
-        job_id: ${{ github.job }}
-      run: |
-        # Yarn prettier
-        echo "::group::Yarn prettier logs"
-        if files=$(yarn -s prettier --list-different .) ; then
-          echo "::endgroup::"
-          echo "result=ok" >> $GITHUB_ACTION
-        else
-          echo $files
-          echo "::endgroup::"
-          title="Malformatted code source for job '${job_id}'"
-          echo "::warning title=${title}::See 'Yarn prettier logs' and/or annotations for details"
-          for file in ${files} ; do
-            echo "::warning file=${file},title=${title}::Mal-formatted file"
-          done
-          echo "result=ko" >> $GITHUB_ACTION
-        fi
+      if: "! contains(inputs.skip, 'prettier')"
+      continue-on-error: true
+      run: yarn -s prettier --check . || echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
 
-    - name: Prepare site artefacts
-      id: prepare_site_artefacts
-      if: inputs.archive != ''
-      run: |
-        ### Prepare site artefacts
-        site_dir="site"
-        mkdir -p "${site_dir}"
-        mv dist/eslint.html "${site_dir}/"
-        echo "dir=$(realpath ${site_dir})" >> $GITHUB_ACTION
+    - name: Audit Failure
+      id: yarn_audit_failure
+      if: steps.yarn_audit.outputs.result == 'failure'
+      run: echo "::error title=Audit Failure::Yarn audit has failed. Run yarn audit locally or see Dependabot alerts"
       shell: sh
 
-    - name: Prepare data artefacts
-      id: prepare_data_artefacts
-      if: inputs.archive != ''
-      run: |
-        ### Prepare data artefacts
-        data_dir="_data"
-        mkdir -p "${data_dir}"
-        mv dist/audit.json "${data_dir}/"
-        echo "dir=$(realpath ${data_dir})" >> $GITHUB_ACTION
+    - name: Eslint Failure details
+      id: yarn_eslint_failure_details
+      if: steps.yarn_eslint.outputs.result == 'failure'
+      run: >
+        '${{ github.action_path }}'/eslint_details.sh
       shell: sh
 
-    - name: Upload artefacts
-      id: upload_artefacts
-      if: inputs.archive != ''
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ inputs.archive }}
-        path: |
-          ${{ steps.prepare_data_artefacts.outputs.dir }}
-          ${{ steps.prepare_site_artefacts.outputs.dir }}
+    - name: Prettier failure details
+      id: yarn_prettier_failure_details
+      if: steps.yarn_prettier.outputs.result == 'failure'
+      run: >
+        '${{ github.action_path }}'/prettier_details.sh
+      shell: sh
+
+    - name: Warn about skipping audit
+      id: warn_skip_audit
+      if: contains(inputs.skip, 'audit')
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn audit."
+      shell: sh
+
+    - name: Warn about skipping eslint
+      id: warn_skip_eslint
+      if: contains(inputs.skip, 'eslint')
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn eslint ."
+      shell: sh
+
+    - name: Warn about skipping prettier
+      id: warn_skip_prettier
+      if: contains(inputs.skip, 'prettier')
+      run: echo "::warning title=Static Analysis::Job parametrized to skip yarn prettier --check ."
+      shell: sh
 
     - name: Summary
       id: summary
-      env:
-        job_id: ${{ github.job }}
-        audit: ${{ steps.yarn_audit.outputs.result }}
-        ignore_audit: ${{ contains(inputs.ignore, 'audit') }}
-        eslint: ${{ steps.yarn_eslint.outputs.result }}
-        ignore_eslint: ${{ contains(inputs.ignore, 'eslint') }}
-        prettier: ${{ steps.yarn_prettier.outputs.result }}
-        ignore_prettier: ${{ contains(inputs.ignore, 'prettier') }}
-      run: |
-        # Summary
-        title="Static analysis for job '${job_id}'"
-        ignored=""
-        global_failure="false"
-        if [ "${audit}" != 'ok' ]; then
-          if ${ignore_audit}; then
-            echo "::warning title=${title}::Ignoring dependencies audit failure"
-            ignored="${ignored}audit "
-          else
-            echo "::error title=${title}::Static analysis failed because of dependencies security issues"
-            global_failure="true"
-          fi
-        fi
-        if [ "${eslint}" != 'ok' ]; then
-          if ${ignore_eslint}; then
-            echo "::warning title=${title}::Ignoring code-quality concerns"
-            ignored="${ignored}eslint "
-          else
-            echo "::error title=${title}::Static analysis failed because of code-quality concerns"
-            global_failure="true"
-          fi
-        fi
-        if [ "${prettier}"  != 'ok' ]; then
-          if ${ignore_prettier}; then
-            echo "::warning title=${title}::Ignoring code formatting concerns"
-            ignored="${ignored}prettier "
-          else
-            echo "::error title=${title}::Static analysis failed because of code formatting concerns"
-            global_failure="true"
-          fi
-        fi
-        if [ "${global_failure}" = 'true' ]; then
-          exit 1
-        elif [ -z "${ignored}" ]; then
-          echo "::notice title=${title}::Success"
-        else
-          echo "::warning title=${title}::Static analysis pass because some failures were ignored"
-          echo "ignored=${ignored}" >> $GITHUB_ACTION
-        fi
+      if: steps.yarn_audit.outputs.result == 'failure' || steps.yarn_eslint.outputs.result == 'failure' || steps.yarn_prettier.outputs.result == 'failure'
+      run: echo "result=failure" >> $GITHUB_OUTPUT
       shell: sh
