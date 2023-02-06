@@ -63,12 +63,12 @@ outputs:
   instance:
     description: >
       An abstract string value, for youwol/nestor/py-youwol/stop action, i.e :
-      - uses: youwol/nestor/py-youwol/start@v1
+      - uses: youwol/nestor/py-youwol/start@v2
         id: start_py-youwol
         with:
           conf_repository: youwol/integration-tests-conf
           conf_path: yw_config_IT.py
-      - uses: youwol/nestor/py-youwol/stop@v1
+      - uses: youwol/nestor/py-youwol/stop@v2
         id: stop_py-youwol
         with:
           instance: steps.start_py-youwol.outputs.instance
@@ -92,7 +92,7 @@ runs:
     - name: Prepare py-youwol repository
       id: prepare_py-youwol
       if: steps.setup_action.outputs.py-youwol_checkout == 'true'
-      uses: youwol/nestor/py/prepare@v1
+      uses: youwol/nestor/py/prepare@v2
       with:
         repository: youwol/py-youwol
         ref: ${{ inputs.ref }}
