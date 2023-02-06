@@ -96,7 +96,7 @@ runs:
       with:
         repository: youwol/py-youwol
         ref: ${{ inputs.ref }}
-        requirements: requirements-dev.txt
+        requirements: requirements-qa.txt
         path: ${{ steps.setup_action.outputs.sources }}
 
     - name: Checkout configuration repository
@@ -115,23 +115,6 @@ runs:
       run: mv '${{ steps.setup_action.outputs.conf-checkout-path }}' '${{ steps.setup_action.outputs.conf-directory }}'
       shell: sh
 
-    - name: Create Coverage config
-      id: create_coverage_config
-      working-directory: ${{ steps.setup_action.outputs.sources }}
-      run: |
-        cat  << _coverage_rc > .coveragerc
-        [run]
-        branch = True
-        data_file = coverage.coverage
-        relative_files = True
-        debug = sys,config,pathmap
-        omit =
-          ${{ steps.setup_action.outputs.config }}
-          ${{ inputs.coverage_omit }}
-        _coverage_rc
-      shell: sh
-
-
     - name: Start py-youwol
       id: start_py-youwol
       working-directory: ${{ steps.setup_action.outputs.sources }}
@@ -144,8 +127,10 @@ runs:
         PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
         USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
         PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
-      run: >
-        PYTHONPATH=./ coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
+      run: |
+        PYTHONPATH=./ coverage run \
+          --omit=${{ steps.setup_action.outputs.config }},${{ inputs.coverage_omit }} \
+          "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh
 
     - name: Wait for py-youwol readiness
