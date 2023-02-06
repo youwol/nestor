@@ -31,6 +31,12 @@ inputs:
       Either relative to conf_repository, or to workflow workspace if no conf_repository
     required: true
 
+  custom_start_cmd:
+    description: >
+      Custom start command to use, in place of coverage run.
+    required: false
+    default: ''
+
   ref:
     description: >
       Branch, tag or SHA to checkout py-youwol repository. 
@@ -117,6 +123,7 @@ runs:
 
     - name: Start py-youwol
       id: start_py-youwol
+      if: inputs.custom_start_cmd == ''
       working-directory: ${{ steps.setup_action.outputs.sources }}
       continue-on-error: true
       env:
@@ -131,6 +138,23 @@ runs:
         PYTHONPATH=./ coverage run \
           --omit=${{ steps.setup_action.outputs.config }},${{ inputs.coverage_omit }} \
           "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
+      shell: sh
+
+    - name: Custom start py-youwol
+      id: custom_start_py-youwol
+      if: inputs.custom_start_cmd != ''
+      working-directory: ${{ steps.setup_action.outputs.sources }}
+      continue-on-error: true
+      env:
+        COVERAGE_DEBUG_FILE: coverage.debug
+        PY_YOUWOL_MAIN_SCRIPT: youwol/main.py
+        PY_YOUWOL_CONFIG: ${{ steps.setup_action.outputs.config }}
+        USERNAME_INTEGRATION_TESTS: ${{ inputs.USERNAME_INTEGRATION_TESTS }}
+        PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
+        USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
+        PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
+      run: |
+        ${{ inputs.custom_start_cmd }} --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh
 
     - name: Wait for py-youwol readiness
