@@ -68,6 +68,7 @@ runs:
         git config --global user.email "${nestor_email}"
         git config --global user.signingkey "${nestor_signingkey}"
         git config --global commit.gpgsign true
+        git config --global tag.gpgSign true
       shell: sh
 
     - name: Summary
