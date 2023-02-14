@@ -96,7 +96,7 @@ runs:
       with:
         repository: youwol/py-youwol
         ref: ${{ inputs.ref }}
-        requirements: dev-requirements.txt
+        requirements: requirements-dev.txt
         path: ${{ steps.setup_action.outputs.sources }}
 
     - name: Checkout configuration repository
