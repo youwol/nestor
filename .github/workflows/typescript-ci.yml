@@ -23,11 +23,11 @@ jobs:
     steps:
       - name: Prepare repository
         id: prepare
-        uses: youwol/nestor/ts/prepare@v1
+        uses: youwol/nestor/ts/prepare@v2
 
       - name: Static Analysis
         id: static_analysis
-        uses: youwol/nestor/ts/static_analysis@v1
+        uses: youwol/nestor/ts/static_analysis@v2
         with:
           skip: ${{ inputs.skip }}
 
@@ -74,12 +74,12 @@ jobs:
 
       - name: Prepare repository
         id: prepare
-        uses: youwol/nestor/ts/prepare@v1
+        uses: youwol/nestor/ts/prepare@v2
 
       - name: Prepare py-youwol repository
         if: inputs.pipeline
         id: prepare_py-youwol
-        uses: youwol/nestor/py/prepare@v1
+        uses: youwol/nestor/py/prepare@v2
         with:
           repository: youwol/py-youwol
           ref: main

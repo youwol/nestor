@@ -31,6 +31,12 @@ inputs:
       Either relative to conf_repository, or to workflow workspace if no conf_repository
     required: true
 
+  custom_start_cmd:
+    description: >
+      Custom start command to use, in place of coverage run.
+    required: false
+    default: ''
+
   ref:
     description: >
       Branch, tag or SHA to checkout py-youwol repository. 
@@ -63,12 +69,12 @@ outputs:
   instance:
     description: >
       An abstract string value, for youwol/nestor/py-youwol/stop action, i.e :
-      - uses: youwol/nestor/py-youwol/start@v1
+      - uses: youwol/nestor/py-youwol/start@v2
         id: start_py-youwol
         with:
           conf_repository: youwol/integration-tests-conf
           conf_path: yw_config_IT.py
-      - uses: youwol/nestor/py-youwol/stop@v1
+      - uses: youwol/nestor/py-youwol/stop@v2
         id: stop_py-youwol
         with:
           instance: steps.start_py-youwol.outputs.instance
@@ -92,11 +98,11 @@ runs:
     - name: Prepare py-youwol repository
       id: prepare_py-youwol
       if: steps.setup_action.outputs.py-youwol_checkout == 'true'
-      uses: youwol/nestor/py/prepare@v1
+      uses: youwol/nestor/py/prepare@v2
       with:
         repository: youwol/py-youwol
         ref: ${{ inputs.ref }}
-        requirements: requirements-dev.txt
+        requirements: requirements-qa.txt
         path: ${{ steps.setup_action.outputs.sources }}
 
     - name: Checkout configuration repository
@@ -115,25 +121,9 @@ runs:
       run: mv '${{ steps.setup_action.outputs.conf-checkout-path }}' '${{ steps.setup_action.outputs.conf-directory }}'
       shell: sh
 
-    - name: Create Coverage config
-      id: create_coverage_config
-      working-directory: ${{ steps.setup_action.outputs.sources }}
-      run: |
-        cat  << _coverage_rc > .coveragerc
-        [run]
-        branch = True
-        data_file = coverage.coverage
-        relative_files = True
-        debug = sys,config,pathmap
-        omit =
-          ${{ steps.setup_action.outputs.config }}
-          ${{ inputs.coverage_omit }}
-        _coverage_rc
-      shell: sh
-
-
     - name: Start py-youwol
       id: start_py-youwol
+      if: inputs.custom_start_cmd == ''
       working-directory: ${{ steps.setup_action.outputs.sources }}
       continue-on-error: true
       env:
@@ -144,8 +134,27 @@ runs:
         PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
         USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
         PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
-      run: >
-        PYTHONPATH=./ coverage run "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
+      run: |
+        PYTHONPATH=./ coverage run \
+          --omit=${{ steps.setup_action.outputs.config }},${{ inputs.coverage_omit }} \
+          "$PY_YOUWOL_MAIN_SCRIPT" --conf "$PY_YOUWOL_CONFIG" --daemonize
+      shell: sh
+
+    - name: Custom start py-youwol
+      id: custom_start_py-youwol
+      if: inputs.custom_start_cmd != ''
+      working-directory: ${{ steps.setup_action.outputs.sources }}
+      continue-on-error: true
+      env:
+        COVERAGE_DEBUG_FILE: coverage.debug
+        PY_YOUWOL_MAIN_SCRIPT: youwol/main.py
+        PY_YOUWOL_CONFIG: ${{ steps.setup_action.outputs.config }}
+        USERNAME_INTEGRATION_TESTS: ${{ inputs.USERNAME_INTEGRATION_TESTS }}
+        PASSWORD_INTEGRATION_TESTS: ${{ inputs.PASSWORD_INTEGRATION_TESTS }}
+        USERNAME_INTEGRATION_TESTS_BIS: ${{ inputs.USERNAME_INTEGRATION_TESTS_BIS }}
+        PASSWORD_INTEGRATION_TESTS_BIS: ${{ inputs.PASSWORD_INTEGRATION_TESTS_BIS }}
+      run: |
+        ${{ inputs.custom_start_cmd }} --conf "$PY_YOUWOL_CONFIG" --daemonize
       shell: sh
 
     - name: Wait for py-youwol readiness
