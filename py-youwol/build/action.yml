@@ -1,0 +1,6 @@
+name: Build py-youwol
+description: Build wheel and sources distribution of py-youwol
+author: jdecharne@youwol.com
+runs:
+  using: node16
+  main: 'dist/action/index.js'

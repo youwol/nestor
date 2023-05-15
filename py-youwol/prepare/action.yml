@@ -1,5 +1,5 @@
-name: Prepare Typescript Repository
-description: Prepare Typescript repository, optionally moving it to path outside workspace
+name: Prepare Python Repository
+description: Prepare Python repository, optionally moving it to path outside workspace
 author: jdecharne@youwol.com
 
 
@@ -23,10 +23,14 @@ inputs:
       Default to the reference that triggered the workflow
     default: ${{ github.ref }}
 
-  path:
+  python-version:
     description: >
-      The final path of the local repository. 
-      Default to empty : the repository will not be moved after checkout
+      Python version to use.
+      Default to 3.10
+    default: '3.10'
+
+  path:
+    description: "The final path of the local repository. Default to empty : the repository will not be moved once checkout"
     default: ''
 
 runs:
@@ -41,11 +45,8 @@ runs:
         echo "repoString=$repo_string" >> $GITHUB_OUTPUT
         if [ -n "${{ inputs.path }}" ]; then
           random=$(awk 'BEGIN { srand(); print int(rand()*32768) }' /dev/null | base64)
-          checkout_path=".ts_prepare_${random}"
+          checkout_path=".py_prepare_${random}"
           echo "checkoutPath=${checkout_path}" >> $GITHUB_OUTPUT 
-          echo "lockFile=${checkout_path}/yarn.lock" >> $GITHUB_OUTPUT
-        else
-          echo "lockFile=yarn.lock" >> $GITHUB_OUTPUT
         fi
       shell: sh
 
@@ -58,18 +59,18 @@ runs:
         ref: ${{ inputs.ref }}
         path: ${{ steps.setup_action.outputs.checkoutPath }}
 
-    - name: Setup Node.js
-      id: setup_node
-      uses: actions/setup-node@v3
+    - name: Setup Python
+      id: setup_python
+      uses: actions/setup-python@v4
       with:
-        node-version: '16'
-        cache: 'yarn'
-        cache-dependency-path: ${{ steps.setup_action.outputs.lockFile }}
+        python-version: ${{ inputs.python-version }}
+        cache: 'pip'
+        cache-dependency-path: ${{ steps.setup_action.outputs.checkoutPath }}/pyproject.toml
 
-    - name: Yarn install
-      id: yarn_install
+    - name: Install py-youwol
+      id: install_py-youwol
       working-directory: ${{ steps.setup_action.outputs.checkoutPath }}
-      run: yarn --frozen-lockfile
+      run: pip install .[qa]
       shell: sh
 
     - name: Move repository
@@ -82,5 +83,8 @@ runs:
       id: update_env
       env:
         INPUT_PATH: ${{ inputs.path }}
-      run: echo "YARN_INSTALLED=${INPUT_PATH:-$GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+      run: |
+        echo "PY_YOUWOL_SOURCES=${INPUT_PATH:-$GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+        echo "PY_YOUWOL_BIN=$(which youwol)" >> "$GITHUB_ENV"
+        echo "PY_YOUWOL_BIN_COVERAGE=$(which coverage)" >> "$GITHUB_ENV"
       shell: sh

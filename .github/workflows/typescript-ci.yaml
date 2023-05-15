@@ -1,0 +1,69 @@
+name: Continuous Integration
+
+on:
+  workflow_call:
+    inputs:
+      skip:
+        type: string
+        description: |
+          List of checks to skip, among audit, eslint, prettier, autogen, build, doc, cleanness, tests
+        default: ''
+        required: false
+      pyYouwolRef:
+        type: string
+        description: |
+          Ref (branch, tag, commit) of py-youwol for pipeline
+        default: main
+        required: false
+
+
+jobs:
+  static_analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v3
+
+      - name: Static Analysis
+        id: static_analysis
+        uses: youwol/nestor/ts/static_analysis@v3
+        with:
+          skip: ${{ inputs.skip }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v3
+
+      - name: Prepare py-youwol repository
+        if: "! contains(inputs.skips, 'autogen')"
+        id: prepare_py-youwol
+        uses: youwol/nestor/py-youwol/prepare@v3
+        with:
+          repository: youwol/py-youwol
+          ref: ${{ inputs.pyYouwolRef }}
+          path: ${{ runner.temp }}/py-youwol
+
+      - name: Build
+        id: build
+        uses: youwol/nestor/ts/build@v3
+        with:
+          skip: ${{ inputs.skip }}
+
+  tests:
+    name: Tests
+    if: "! contains(inputs.skip, 'tests')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare repository
+        id: prepare
+        uses: youwol/nestor/ts/prepare@v3
+
+      - name: Tests
+        id: tests
+        uses: youwol/nestor/ts/tests@v3

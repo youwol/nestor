@@ -1,11 +1,11 @@
-name: Typescript Static Analysis
-description: Run static analysis on a typescript project
+name: Typescript Build
+description: Build a typescript project
 author: jdecharne@youwol.com
 inputs:
   skip:
     required: false
     description: |
-      list of steps to skip : audit, eslint, prettier
+      list of steps to skip : autogen, build, doc, cleanness
     default: ''
 runs:
   using: node16

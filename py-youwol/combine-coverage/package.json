@@ -1,0 +1,49 @@
+{
+    "name": "py-youwol-combine-coverages",
+    "version": "0.0.9",
+    "private": true,
+    "description": "Github Action : py-youwol Combine Coverages",
+    "main": "lib/main.js",
+    "scripts": {
+        "build": "tsc",
+        "prettier-check": "prettier --check .",
+        "eslint-check": "eslint .",
+        "package_action": "ncc build src/action.ts -o dist/action/",
+        "package_main": "ncc build src/main.ts -o dist/main/",
+        "all": "rm -r lib dist ; yarn prettier-check && yarn eslint-check && yarn build && yarn package_action && yarn package_main"
+    },
+    "keywords": [
+        "actions",
+        "node",
+        "youwol"
+    ],
+    "author": "jdecharne@youwol.com",
+    "license": "MIT",
+    "dependencies": {
+        "@actions/io": "^1.1.3",
+        "@actions/core": "^1.10.0",
+        "@actions/exec": "^1.1.1"
+    },
+    "devDependencies": {
+        "@types/node": "^18.16.3",
+        "@vercel/ncc": "^0.36.1",
+        "eslint-plugin-github": "^4.7.0",
+        "js-yaml": "^4.1.0",
+        "typescript": "^5.0.4",
+        "@youwol/prettier-config": "^0.1.0",
+        "@youwol/eslint-config": "^0.1.0",
+        "@youwol/tsconfig": "^0.1.0",
+        "@youwol/jest-preset": "^0.1.0"
+    },
+    "prettier": "@youwol/prettier-config",
+    "eslintConfig": {
+        "extends": [
+            "@youwol"
+        ],
+        "env": {
+            "node": true,
+            "es6": true,
+            "jest/globals": true
+        }
+    }
+}

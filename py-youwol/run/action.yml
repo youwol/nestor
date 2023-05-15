@@ -1,0 +1,23 @@
+name: Run py-youwol
+description: Run py-youwol
+author: jdecharne@youwol.com
+inputs:
+  conf:
+    required: true
+    description: |
+      path to the configuration script for py-youwol
+  coverage:
+    required: false
+    description: |
+      should python coverage be generated
+    default: 'false'
+  name:
+    required: false
+    description: |
+      base name for artifacts
+    default: 'py-youwol'
+
+runs:
+  using: node16
+  main: 'dist/action/index.js'
+  post: 'dist/post/index.js'

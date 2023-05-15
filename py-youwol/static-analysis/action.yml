@@ -1,0 +1,12 @@
+name: Python Static Analysis
+description: Run static analysis on py-youwol
+author: jdecharne@youwol.com
+inputs:
+  skip:
+    required: false
+    description: |
+      list of steps to skip : dep_manager, cleanness, pep8, audit, version_monotony
+    default: ''
+runs:
+  using: node16
+  main: 'dist/action/index.js'

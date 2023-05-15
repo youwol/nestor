@@ -1,0 +1,105 @@
+name: Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: |
+          A name for these tests
+        required: false
+      pyYouwolRef:
+        type: string
+        description: |
+          Ref (tag, branch or commit) of py-youwol to checkout
+        required: false
+      pyYouwolCoverage:
+        type: boolean
+        description: |
+          Run coverage of py-youwol
+        required: false
+        default: false
+      tsRepository:
+        type: string
+        description: |
+          Repository to checkout
+        required: false
+      tsRef:
+        type: string
+        description: |
+          Ref (tag, branch or commit) of the typescript repository to checkout
+        required: false
+      confRepository:
+        type: string
+        description: |
+          Repository to checkout
+        required: false
+        default: youwol/integration-tests-conf
+      confRef:
+        type: string
+        description: |
+          Ref (tag, branch or commit) of the typescript repository to checkout
+        required: false
+      confPath:
+        type: string
+        description: |
+          Path of the config script, relative to the confRepository
+        required: false
+        default: yw_config_IT.py
+    secrets:
+      USERNAME_INTEGRATION_TESTS:
+        required: true
+      PASSWORD_INTEGRATION_TESTS:
+        required: true
+      USERNAME_INTEGRATION_TESTS_BIS:
+        required: true
+      PASSWORD_INTEGRATION_TESTS_BIS:
+        required: true
+
+
+
+
+jobs:
+  integration_tests:
+    name: Integration Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Prepare py-youwol repository
+        id: prepare_py-youwol
+        uses: youwol/nestor/py-youwol/prepare@v3
+        with:
+          repository: youwol/py-youwol
+          ref: ${{ inputs.pyYouwolRef }}
+          path: ${{ runner.temp }}/py-youwol
+
+      - name: Prepare Typescript repository
+        id: prepare_ts
+        uses: youwol/nestor/ts/prepare@v3
+        with:
+          repository: ${{ inputs.tsRepository }}
+          ref: ${{ inputs.tsRef }}
+          path: ${{ runner.temp }}/ts
+
+      - name: Prepare Configuration repository
+        id: prepare_conf
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.confRepository }}
+          ref:  ${{ inputs.confRef }}
+          path: ${{ github.workspace }}/conf
+
+      - name: Run py-youwol
+        id: run_py-youwol
+        uses: youwol/nestor/py-youwol/run@v3
+        env:
+          USERNAME_INTEGRATION_TESTS: ${{ secrets.USERNAME_INTEGRATION_TESTS }}
+          PASSWORD_INTEGRATION_TESTS: ${{ secrets.PASSWORD_INTEGRATION_TESTS }}
+          USERNAME_INTEGRATION_TESTS_BIS: ${{ secrets.USERNAME_INTEGRATION_TESTS_BIS }}
+          PASSWORD_INTEGRATION_TESTS_BIS: ${{ secrets.PASSWORD_INTEGRATION_TESTS_BIS }}
+        with:
+          conf: ${{ github.workspace }}/conf/${{ inputs.confPath }}
+          coverage: ${{ inputs.pyYouwolCoverage }}
+
+      - name: Run tests
+        id: run_tests
+        uses: youwol/nestor/ts/tests@v3

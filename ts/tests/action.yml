@@ -1,0 +1,12 @@
+name: Typescript Tests
+description: Run tests of a typescript project
+author: jdecharne@youwol.com
+inputs:
+  coverage:
+    required: false
+    description: |
+      Run test coverage
+    default: 'false'
+runs:
+  using: node16
+  main: 'dist/action/index.js'
