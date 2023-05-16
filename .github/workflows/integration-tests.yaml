@@ -8,6 +8,7 @@ on:
         description: |
           A name for these tests
         required: false
+        default: 'py-youwol'
       pyYouwolRef:
         type: string
         description: |
@@ -99,6 +100,7 @@ jobs:
         with:
           conf: ${{ github.workspace }}/conf/${{ inputs.confPath }}
           coverage: ${{ inputs.pyYouwolCoverage }}
+          name: ${{ inputs.name }}
 
       - name: Run tests
         id: run_tests
