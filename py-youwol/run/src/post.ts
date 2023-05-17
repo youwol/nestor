@@ -32,20 +32,24 @@ export async function run() {
             artifacts.push('coverage.debug')
 
             startGroup('generate HTML coverage report')
-            await exec_coverage('html', 'coverage_html')
+            const result_html = await exec_coverage('html', 'coverage_html')
             artifacts.push('coverage_html.debug')
             artifacts.push('coverage_html.log')
-            const glober = await glob.create('./htmlcov/')
-            for await (const file of glober.globGenerator()) {
-                artifacts.push(file)
+            if (result_html) {
+                const glober = await glob.create('./htmlcov/')
+                for await (const file of glober.globGenerator()) {
+                    artifacts.push(file)
+                }
             }
             endGroup()
 
             startGroup('generate XML coverage report')
-            await exec_coverage('xml', 'coverage_xml')
+            const result_xml = await exec_coverage('xml', 'coverage_xml')
             artifacts.push('coverage_xml.debug')
             artifacts.push('coverage_xml.log')
-            artifacts.push('coverage.xml')
+            if (result_xml) {
+                artifacts.push('coverage.xml')
+            }
             endGroup()
         }
     } catch (err) {

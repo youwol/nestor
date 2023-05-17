@@ -11961,6 +11961,7 @@ function uploadLogsOnFailure(state) {
 exports.uploadLogsOnFailure = uploadLogsOnFailure;
 function exec_coverage(cmd, logs_prefix, args = []) {
     return __awaiter(this, void 0, void 0, function* () {
+        const title = `Coverage ${cmd}`;
         args.push(cmd);
         const log_file = fs_1.default.createWriteStream(`${logs_prefix}.log`);
         const exit_code = yield (0, exec_1.exec)('coverage', args, {
@@ -11973,7 +11974,7 @@ function exec_coverage(cmd, logs_prefix, args = []) {
             return true;
         }
         else {
-            (0, core_1.error)(`execution of coverage ${cmd} failed`);
+            (0, core_1.error)(`execution of coverage ${cmd} failed`, { title });
             return false;
         }
     });
@@ -12066,36 +12067,40 @@ function run() {
                 artifacts.push('coverage.coverage');
                 artifacts.push('coverage.debug');
                 (0, core_1.startGroup)('generate HTML coverage report');
-                yield (0, commons_1.exec_coverage)('html', 'coverage_html');
+                const result_html = yield (0, commons_1.exec_coverage)('html', 'coverage_html');
                 artifacts.push('coverage_html.debug');
                 artifacts.push('coverage_html.log');
-                const glober = yield glob.create('./htmlcov/');
-                try {
-                    for (var _d = true, _e = __asyncValues(glober.globGenerator()), _f; _f = yield _e.next(), _a = _f.done, !_a;) {
-                        _c = _f.value;
-                        _d = false;
-                        try {
-                            const file = _c;
-                            artifacts.push(file);
-                        }
-                        finally {
-                            _d = true;
-                        }
-                    }
-                }
-                catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                finally {
+                if (result_html) {
+                    const glober = yield glob.create('./htmlcov/');
                     try {
-                        if (!_d && !_a && (_b = _e.return)) yield _b.call(_e);
+                        for (var _d = true, _e = __asyncValues(glober.globGenerator()), _f; _f = yield _e.next(), _a = _f.done, !_a;) {
+                            _c = _f.value;
+                            _d = false;
+                            try {
+                                const file = _c;
+                                artifacts.push(file);
+                            }
+                            finally {
+                                _d = true;
+                            }
+                        }
                     }
-                    finally { if (e_1) throw e_1.error; }
+                    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                    finally {
+                        try {
+                            if (!_d && !_a && (_b = _e.return)) yield _b.call(_e);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                    }
                 }
                 (0, core_1.endGroup)();
                 (0, core_1.startGroup)('generate XML coverage report');
-                yield (0, commons_1.exec_coverage)('xml', 'coverage_xml');
+                const result_xml = yield (0, commons_1.exec_coverage)('xml', 'coverage_xml');
                 artifacts.push('coverage_xml.debug');
                 artifacts.push('coverage_xml.log');
-                artifacts.push('coverage.xml');
+                if (result_xml) {
+                    artifacts.push('coverage.xml');
+                }
                 (0, core_1.endGroup)();
             }
         }

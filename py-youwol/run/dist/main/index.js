@@ -10802,6 +10802,7 @@ function run() {
             throw Error('No configuration file specified');
         }
         const coverage = (0, core_1.getInput)('coverage') === 'true';
+        const coverageOmit = (0, core_1.getInput)('coverageOmit');
         const name = (0, core_1.getInput)('name');
         const workingDir = `${os.tmpdir()}/${name}_start_py-youwol`;
         const stopScriptPath = `${workingDir}/py-youwol.shutdown.sh`;
@@ -10821,11 +10822,15 @@ function run() {
             (0, core_1.debug)('Starting action');
             if (coverage) {
                 (0, core_1.startGroup)(`start coverage of ${pathPyYouwolBin} with conf ${pathConf}`);
+                let omit = pathConf;
+                if (coverageOmit !== undefined && coverageOmit.trim() !== '') {
+                    omit = `${omit},${coverageOmit}`;
+                }
                 yield (0, io_1.cp)(`${pathPyYouwolSources}/pyproject.toml`, workingDir);
                 const env = Object.assign(Object.assign({}, process.env), { COVERAGE_DEBUG_FILE: 'coverage.debug', PYTHONPATH: `${pathPyYouwolSources}/src` });
                 const child = (0, child_process_1.spawn)(pathPyYouwolBinCoverage, [
                     'run',
-                    `--omit=${pathConf}`,
+                    `--omit=${omit}`,
                     pathPyYouwolBin,
                     '--conf',
                     pathConf,
@@ -10948,6 +10953,7 @@ function uploadLogsOnFailure(state) {
 exports.uploadLogsOnFailure = uploadLogsOnFailure;
 function exec_coverage(cmd, logs_prefix, args = []) {
     return __awaiter(this, void 0, void 0, function* () {
+        const title = `Coverage ${cmd}`;
         args.push(cmd);
         const log_file = fs_1.default.createWriteStream(`${logs_prefix}.log`);
         const exit_code = yield (0, exec_1.exec)('coverage', args, {
@@ -10960,7 +10966,7 @@ function exec_coverage(cmd, logs_prefix, args = []) {
             return true;
         }
         else {
-            (0, core_1.error)(`execution of coverage ${cmd} failed`);
+            (0, core_1.error)(`execution of coverage ${cmd} failed`, { title });
             return false;
         }
     });
