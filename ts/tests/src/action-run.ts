@@ -21,15 +21,19 @@ export async function run(): Promise<void> {
 
     try {
         debug('Starting action')
+        const title = 'Tests'
 
         startGroup('Run tests')
         let result = 0
         if (coverage) {
-            result = await exec('yarn', ['test-coverage'])
+            result = await exec('yarn', ['test-coverage'], {
+                ignoreReturnCode: true,
+            })
         } else {
-            result = await exec('yarn', ['test'])
+            result = await exec('yarn', ['test'], { ignoreReturnCode: true })
         }
         if (result !== 0) {
+            error('Tests have failure. See logs.', { title })
             setFailed('Test failed')
         }
         endGroup()
