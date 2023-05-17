@@ -41,6 +41,7 @@ export async function run(): Promise<void> {
         throw Error('No configuration file specified')
     }
     const coverage = getInput('coverage') === 'true'
+    const coverageOmit = getInput('coverageOmit')
     const name = getInput('name')
     const workingDir = `${os.tmpdir()}/${name}_start_py-youwol`
     const stopScriptPath = `${workingDir}/py-youwol.shutdown.sh`
@@ -64,6 +65,10 @@ export async function run(): Promise<void> {
             startGroup(
                 `start coverage of ${pathPyYouwolBin} with conf ${pathConf}`,
             )
+            let omit = pathConf
+            if (coverageOmit !== undefined && coverageOmit.trim() !== '') {
+                omit = `${omit},${coverageOmit}`
+            }
             await cp(`${pathPyYouwolSources}/pyproject.toml`, workingDir)
             const env = {
                 ...process.env,
@@ -74,7 +79,7 @@ export async function run(): Promise<void> {
                 pathPyYouwolBinCoverage,
                 [
                     'run',
-                    `--omit=${pathConf}`,
+                    `--omit=${omit}`,
                     pathPyYouwolBin,
                     '--conf',
                     pathConf,

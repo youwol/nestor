@@ -2,6 +2,11 @@ name: Run py-youwol
 description: Run py-youwol
 author: jdecharne@youwol.com
 inputs:
+  name:
+    required: false
+    description: |
+      base name for artifacts
+    default: 'py-youwol'
   conf:
     required: true
     description: |
@@ -11,11 +16,10 @@ inputs:
     description: |
       should python coverage be generated
     default: 'false'
-  name:
+  coverageOmit:
     required: false
     description: |
-      base name for artifacts
-    default: 'py-youwol'
+      Patterns for sources path to omit from coverage, separated by comma
 
 runs:
   using: node16
