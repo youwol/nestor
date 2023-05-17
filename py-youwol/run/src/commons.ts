@@ -20,6 +20,7 @@ export async function exec_coverage(
     logs_prefix: string,
     args: string[] = [],
 ): Promise<boolean> {
+    const title = `Coverage ${cmd}`
     args.push(cmd)
     const log_file = fs.createWriteStream(`${logs_prefix}.log`)
 
@@ -35,7 +36,7 @@ export async function exec_coverage(
     if (exit_code === 0) {
         return true
     } else {
-        error(`execution of coverage ${cmd} failed`)
+        error(`execution of coverage ${cmd} failed`, { title })
         return false
     }
 }
