@@ -25,12 +25,15 @@ export async function run(): Promise<void> {
 
         startGroup('Run tests')
         let result = 0
+        const args = ['--reporters=default', '--reporters=github-actions']
         if (coverage) {
-            result = await exec('yarn', ['test-coverage'], {
+            result = await exec('yarn', ['-s', 'test-coverage', ...args], {
                 ignoreReturnCode: true,
             })
         } else {
-            result = await exec('yarn', ['test'], { ignoreReturnCode: true })
+            result = await exec('yarn', ['-s', 'test', ...args], {
+                ignoreReturnCode: true,
+            })
         }
         if (result !== 0) {
             error('Tests have failure. See logs.', { title })

@@ -3964,15 +3964,22 @@ function run() {
         const coverage = (0, core_1.getInput)('coverage') === 'true';
         try {
             (0, core_1.debug)('Starting action');
+            const title = 'Tests';
             (0, core_1.startGroup)('Run tests');
             let result = 0;
+            const args = ['--reporters=default', '--reporters=github-actions'];
             if (coverage) {
-                result = yield (0, exec_1.exec)('yarn', ['test-coverage']);
+                result = yield (0, exec_1.exec)('yarn', ['-s', 'test-coverage', ...args], {
+                    ignoreReturnCode: true,
+                });
             }
             else {
-                result = yield (0, exec_1.exec)('yarn', ['test']);
+                result = yield (0, exec_1.exec)('yarn', ['-s', 'test', ...args], {
+                    ignoreReturnCode: true,
+                });
             }
             if (result !== 0) {
+                (0, core_1.error)('Tests have failure. See logs.', { title });
                 (0, core_1.setFailed)('Test failed');
             }
             (0, core_1.endGroup)();
