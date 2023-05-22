@@ -38,15 +38,16 @@ export async function run(): Promise<void> {
         }
 
         if (results.some((result) => result === 'failure')) {
-            setFailed('Build failed')
+            setFailed('Job failed because build failed')
         }
     } catch (err) {
+        let err_msg
         if (err instanceof Error) {
-            setFailed(err.message)
+            err_msg = err.message
         } else {
-            error(typeof err)
-            setFailed('Unexpected error')
+            err_msg = `error of type ${typeof err}`
         }
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     }
 }
 

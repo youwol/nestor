@@ -2735,13 +2735,14 @@ function run() {
             (0, core_1.warning)('Not yet implemented', { title });
         }
         catch (err) {
+            let err_msg;
             if (err instanceof Error) {
-                (0, core_1.setFailed)(err.message);
+                err_msg = err.message;
             }
             else {
-                (0, core_1.error)(typeof err);
-                (0, core_1.setFailed)('Unexpected error');
+                err_msg = `error of type ${typeof err}`;
             }
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
     });
 }

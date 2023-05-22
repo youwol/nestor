@@ -7,11 +7,15 @@ import { State } from './state'
 export async function uploadLogsOnFailure(state: State) {
     if (fs.existsSync(state.logsPath)) {
         const artifactClient = create()
-        await artifactClient.uploadArtifact(
-            `${state.name}_failure`,
-            [state.logsPath],
-            state.workingDir,
-        )
+        try {
+            await artifactClient.uploadArtifact(
+                `${state.name}_failure`,
+                [state.logsPath],
+                state.workingDir,
+            )
+        } catch (err) {
+            error(`Failed to upload logs on failure : ${err}`)
+        }
     }
 }
 

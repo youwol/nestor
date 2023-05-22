@@ -11954,7 +11954,12 @@ function uploadLogsOnFailure(state) {
     return __awaiter(this, void 0, void 0, function* () {
         if (fs_1.default.existsSync(state.logsPath)) {
             const artifactClient = (0, artifact_1.create)();
-            yield artifactClient.uploadArtifact(`${state.name}_failure`, [state.logsPath], state.workingDir);
+            try {
+                yield artifactClient.uploadArtifact(`${state.name}_failure`, [state.logsPath], state.workingDir);
+            }
+            catch (err) {
+                (0, core_1.error)(`Failed to upload logs on failure : ${err}`);
+            }
         }
     });
 }
@@ -12051,12 +12056,12 @@ function run() {
             let stopped = false;
             (0, core_1.startGroup)('stopping py-youwol');
             if (!fs_1.default.existsSync(state.stopScriptPath)) {
-                (0, core_1.setFailed)(`Cannot find script ${state.stopScriptPath}`);
+                (0, core_1.setFailed)(`Job failed because py-youwol stopping script ${state.stopScriptPath} does not exist`);
             }
             else {
                 const result = yield (0, exec_1.exec)('sh', [state.stopScriptPath]);
                 if (result !== 0) {
-                    (0, core_1.setFailed)('Failed to stop py-youwol');
+                    (0, core_1.setFailed)('Job failed because py-youwol failed to stop');
                 }
                 else {
                     stopped = true;
@@ -12105,8 +12110,14 @@ function run() {
             }
         }
         catch (err) {
-            yield (0, commons_1.uploadLogsOnFailure)(state);
-            (0, core_1.setFailed)(`Failed to properly stop py-youwol: ${err}`);
+            let err_msg;
+            if (err instanceof Error) {
+                err_msg = err.message;
+            }
+            else {
+                err_msg = `error of type ${typeof err}`;
+            }
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
         finally {
             yield uploadFiles(state, artifacts);
@@ -12116,21 +12127,23 @@ function run() {
 exports.run = run;
 function uploadFiles(state, artifacts) {
     return __awaiter(this, void 0, void 0, function* () {
+        const title = 'Py-youwol execution artifacts';
         const artifactClient = (0, artifact_1.create)();
         artifacts
             .filter((path) => !fs_1.default.existsSync(path))
-            .forEach((path) => (0, core_1.warning)(`File not found: ${path}`, { title: 'Artifacts' }));
+            .forEach((path) => (0, core_1.warning)(`File not found: ${path}`, { title }));
         const finalArtifacts = artifacts.filter((path) => fs_1.default.existsSync(path));
         try {
             yield artifactClient.uploadArtifact(state.name, finalArtifacts, state.workingDir);
         }
         catch (err) {
             yield (0, commons_1.uploadLogsOnFailure)(state);
-            (0, core_1.setFailed)(`Failed to upload artifacts: ${err}`);
+            (0, core_1.error)(`Upload failed : ${err}`, { title });
+            (0, core_1.setFailed)(`Job failed because upload of artifacts failed`);
         }
     });
 }
-run().catch((error) => (0, core_1.setFailed)('Workflow failed! ' + error.message));
+run().catch((error) => (0, core_1.setFailed)(`Job failed to execute : ${error.message}`));
 
 
 /***/ }),

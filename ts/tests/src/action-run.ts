@@ -1,11 +1,4 @@
-import {
-    debug,
-    endGroup,
-    error,
-    getInput,
-    setFailed,
-    startGroup,
-} from '@actions/core'
+import { debug, endGroup, getInput, setFailed, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 
 export async function run(): Promise<void> {
@@ -21,7 +14,6 @@ export async function run(): Promise<void> {
 
     try {
         debug('Starting action')
-        const title = 'Tests'
 
         startGroup('Run tests')
         let result = 0
@@ -36,16 +28,16 @@ export async function run(): Promise<void> {
             })
         }
         if (result !== 0) {
-            error('Tests have failure. See logs.', { title })
-            setFailed('Test failed')
+            setFailed('Job failed because some tests failed')
         }
         endGroup()
     } catch (err) {
+        let err_msg
         if (err instanceof Error) {
-            setFailed(err.message)
+            err_msg = err.message
         } else {
-            error(typeof err)
-            setFailed('Unexpected error')
+            err_msg = `error of type ${typeof err}`
         }
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     }
 }

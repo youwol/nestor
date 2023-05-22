@@ -3976,17 +3976,18 @@ function run() {
                 (0, core_1.warning)('Some checks skipped', { title: 'Build' });
             }
             if (results.some((result) => result === 'failure')) {
-                (0, core_1.setFailed)('Build failed');
+                (0, core_1.setFailed)('Job failed because build failed');
             }
         }
         catch (err) {
+            let err_msg;
             if (err instanceof Error) {
-                (0, core_1.setFailed)(err.message);
+                err_msg = err.message;
             }
             else {
-                (0, core_1.error)(typeof err);
-                (0, core_1.setFailed)('Unexpected error');
+                err_msg = `error of type ${typeof err}`;
             }
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
     });
 }

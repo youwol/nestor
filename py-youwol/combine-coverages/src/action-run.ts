@@ -1,4 +1,4 @@
-import { debug, error, setFailed, warning } from '@actions/core'
+import { debug, setFailed, warning } from '@actions/core'
 
 export type CheckStatus = 'ok' | 'failure' | 'skipped'
 
@@ -17,11 +17,12 @@ export async function run(): Promise<void> {
         const title = 'Combine Coverages'
         warning('Not yet implemented', { title })
     } catch (err) {
+        let err_msg
         if (err instanceof Error) {
-            setFailed(err.message)
+            err_msg = err.message
         } else {
-            error(typeof err)
-            setFailed('Unexpected error')
+            err_msg = `error of type ${typeof err}`
         }
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     }
 }

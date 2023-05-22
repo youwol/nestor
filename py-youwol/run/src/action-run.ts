@@ -4,10 +4,10 @@ import {
     endGroup,
     error,
     getInput,
+    info,
     setFailed,
     startGroup,
 } from '@actions/core'
-import { exec } from '@actions/exec'
 import { spawn } from 'child_process'
 import { cp, mkdirP } from '@actions/io'
 import { HttpClient } from '@actions/http-client'
@@ -61,6 +61,8 @@ export async function run(): Promise<void> {
 
     try {
         debug('Starting action')
+        const title = 'Run py-youwol'
+        let child
         if (coverage) {
             startGroup(
                 `start coverage of ${pathPyYouwolBin} with conf ${pathConf}`,
@@ -75,7 +77,7 @@ export async function run(): Promise<void> {
                 COVERAGE_DEBUG_FILE: 'coverage.debug',
                 PYTHONPATH: `${pathPyYouwolSources}/src`,
             }
-            const child = spawn(
+            child = spawn(
                 pathPyYouwolBinCoverage,
                 [
                     'run',
@@ -91,76 +93,74 @@ export async function run(): Promise<void> {
                     env,
                 },
             )
-            child.stdout.pipe(process.stdout)
-            child.stderr.pipe(process.stderr)
-            child.on('exit', () => console.log('EXIT'))
-            child.on('error', (error) => setFailed(error))
-            child.on('close', (e) => console.log(`exit code is ${e}`))
-            endGroup()
         } else {
             startGroup(`start ${pathPyYouwolBin} with conf ${pathConf}`)
-            const child = spawn(
+            child = spawn(
                 pathPyYouwolBin,
                 ['--conf', pathConf, '--daemonize'],
                 { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
             )
-            child.stdout.pipe(process.stdout)
-            child.stderr.pipe(process.stderr)
-            child.on('exit', () => console.log('EXIT'))
-            child.on('error', (error) => setFailed(error))
-            child.on('close', (e) => console.log(`exit code is ${e}`))
-            endGroup()
         }
+        child.stdout.pipe(process.stdout)
+        child.stderr.pipe(process.stderr)
+        child.on('exit', () => info('spawned process exited'))
+        child.on('error', (err) =>
+            error(`Failed to start py-youwol : ${err.message}`, { title }),
+        )
+        child.on('close', (e) => info(`spawned process exit code is ${e}`))
+        endGroup()
 
         const started = await waitPyYouwol()
 
         if (!started) {
             await uploadLogsOnFailure(state)
-            setFailed('Py-youwol failed to start')
+            setFailed('Job failed because py-youwol failed to start')
         }
     } catch (err) {
         await uploadLogsOnFailure(state)
+        let err_msg
         if (err instanceof Error) {
-            setFailed(err.message)
+            err_msg = err.message
         } else {
-            error(typeof err)
-            setFailed('Unexpected error')
+            err_msg = `error of type ${typeof err}`
         }
-    } finally {
-        await exec('ls', ['-lsa', workingDir])
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     }
 }
 
 async function waitPyYouwol(): Promise<boolean> {
     let _try = 0
     const timeout = 30
+    const http = new HttpClient()
+
     startGroup(`Trying at most ${timeout} seconds to call healtz endpoint`)
-    while (_try <= timeout) {
+    while (_try < timeout) {
         _try += 1
-        console.log(`try to contact py-youwol instance : ${_try}/${timeout}`)
+        info(`try to contact py-youwol instance : ${_try}/${timeout}`)
         try {
-            const http = new HttpClient()
             const resp = await http.get('http://localhost:2001/healthz')
             if (resp.message.statusCode !== 200) {
-                console.log(
+                info(
                     `invalid HTTP status "${resp.message.statusCode}:${resp.message.statusMessage}"`,
                 )
             } else {
-                console.log('get response from endpoint')
+                info('get response from endpoint')
                 const json = JSON.parse(await resp.readBody())
                 const status = json['status']
                 if (status == 'py-youwol ok') {
-                    console.log('py-youwol successfully started')
+                    info('py-youwol successfully started')
                     return true
                 } else {
-                    console.log(`invalid JSON response status : ${status}`)
+                    info(`invalid JSON response status : ${status}`)
                 }
             }
         } catch (err) {
-            console.log(`failed to contact endpoint : ${err}`)
+            info(`failed to contact endpoint : ${err}`)
         }
         await sleep(1000)
     }
     endGroup()
+
+    error(`Failed to contact py-youwol after ${timeout} seconds`)
     return false
 }

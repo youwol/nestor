@@ -27,9 +27,9 @@ export async function run(): Promise<void> {
     const skips = getInput('skip')
         .split(' ')
         .map((skip) => skip.trim())
+    const title = 'Static Analysis'
     try {
         debug('Starting action')
-        const title = 'Static Analysis'
         const results = [
             await runCheck('audit', run_audit, skips),
             await runCheck('eslint', run_eslint, skips),
@@ -41,15 +41,16 @@ export async function run(): Promise<void> {
         }
 
         if (results.some((result) => result === 'failure')) {
-            setFailed('Static analysis failed')
+            setFailed('Job failed because some static analysis checks failed')
         }
     } catch (err) {
+        let err_msg
         if (err instanceof Error) {
-            setFailed(err.message)
+            err_msg = err.message
         } else {
-            error(typeof err)
-            setFailed('Unexpected error')
+            err_msg = `error of type ${typeof err}`
         }
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     }
 }
 

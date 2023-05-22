@@ -10776,7 +10776,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = void 0;
 const utils_1 = __nccwpck_require__(6327);
 const core_1 = __nccwpck_require__(2186);
-const exec_1 = __nccwpck_require__(1514);
 const child_process_1 = __nccwpck_require__(2081);
 const io_1 = __nccwpck_require__(7436);
 const http_client_1 = __nccwpck_require__(6255);
@@ -10820,6 +10819,8 @@ function run() {
         (0, state_1.saveState)(state);
         try {
             (0, core_1.debug)('Starting action');
+            const title = 'Run py-youwol';
+            let child;
             if (coverage) {
                 (0, core_1.startGroup)(`start coverage of ${pathPyYouwolBin} with conf ${pathConf}`);
                 let omit = pathConf;
@@ -10828,7 +10829,7 @@ function run() {
                 }
                 yield (0, io_1.cp)(`${pathPyYouwolSources}/pyproject.toml`, workingDir);
                 const env = Object.assign(Object.assign({}, process.env), { COVERAGE_DEBUG_FILE: 'coverage.debug', PYTHONPATH: `${pathPyYouwolSources}/src` });
-                const child = (0, child_process_1.spawn)(pathPyYouwolBinCoverage, [
+                child = (0, child_process_1.spawn)(pathPyYouwolBinCoverage, [
                     'run',
                     `--omit=${omit}`,
                     pathPyYouwolBin,
@@ -10840,41 +10841,33 @@ function run() {
                     stdio: ['ignore', 'pipe', 'pipe'],
                     env,
                 });
-                child.stdout.pipe(process.stdout);
-                child.stderr.pipe(process.stderr);
-                child.on('exit', () => console.log('EXIT'));
-                child.on('error', (error) => (0, core_1.setFailed)(error));
-                child.on('close', (e) => console.log(`exit code is ${e}`));
-                (0, core_1.endGroup)();
             }
             else {
                 (0, core_1.startGroup)(`start ${pathPyYouwolBin} with conf ${pathConf}`);
-                const child = (0, child_process_1.spawn)(pathPyYouwolBin, ['--conf', pathConf, '--daemonize'], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-                child.stdout.pipe(process.stdout);
-                child.stderr.pipe(process.stderr);
-                child.on('exit', () => console.log('EXIT'));
-                child.on('error', (error) => (0, core_1.setFailed)(error));
-                child.on('close', (e) => console.log(`exit code is ${e}`));
-                (0, core_1.endGroup)();
+                child = (0, child_process_1.spawn)(pathPyYouwolBin, ['--conf', pathConf, '--daemonize'], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
             }
+            child.stdout.pipe(process.stdout);
+            child.stderr.pipe(process.stderr);
+            child.on('exit', () => (0, core_1.info)('spawned process exited'));
+            child.on('error', (err) => (0, core_1.error)(`Failed to start py-youwol : ${err.message}`, { title }));
+            child.on('close', (e) => (0, core_1.info)(`spawned process exit code is ${e}`));
+            (0, core_1.endGroup)();
             const started = yield waitPyYouwol();
             if (!started) {
                 yield (0, commons_1.uploadLogsOnFailure)(state);
-                (0, core_1.setFailed)('Py-youwol failed to start');
+                (0, core_1.setFailed)('Job failed because py-youwol failed to start');
             }
         }
         catch (err) {
             yield (0, commons_1.uploadLogsOnFailure)(state);
+            let err_msg;
             if (err instanceof Error) {
-                (0, core_1.setFailed)(err.message);
+                err_msg = err.message;
             }
             else {
-                (0, core_1.error)(typeof err);
-                (0, core_1.setFailed)('Unexpected error');
+                err_msg = `error of type ${typeof err}`;
             }
-        }
-        finally {
-            yield (0, exec_1.exec)('ls', ['-lsa', workingDir]);
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
     });
 }
@@ -10883,35 +10876,36 @@ function waitPyYouwol() {
     return __awaiter(this, void 0, void 0, function* () {
         let _try = 0;
         const timeout = 30;
+        const http = new http_client_1.HttpClient();
         (0, core_1.startGroup)(`Trying at most ${timeout} seconds to call healtz endpoint`);
-        while (_try <= timeout) {
+        while (_try < timeout) {
             _try += 1;
-            console.log(`try to contact py-youwol instance : ${_try}/${timeout}`);
+            (0, core_1.info)(`try to contact py-youwol instance : ${_try}/${timeout}`);
             try {
-                const http = new http_client_1.HttpClient();
                 const resp = yield http.get('http://localhost:2001/healthz');
                 if (resp.message.statusCode !== 200) {
-                    console.log(`invalid HTTP status "${resp.message.statusCode}:${resp.message.statusMessage}"`);
+                    (0, core_1.info)(`invalid HTTP status "${resp.message.statusCode}:${resp.message.statusMessage}"`);
                 }
                 else {
-                    console.log('get response from endpoint');
+                    (0, core_1.info)('get response from endpoint');
                     const json = JSON.parse(yield resp.readBody());
                     const status = json['status'];
                     if (status == 'py-youwol ok') {
-                        console.log('py-youwol successfully started');
+                        (0, core_1.info)('py-youwol successfully started');
                         return true;
                     }
                     else {
-                        console.log(`invalid JSON response status : ${status}`);
+                        (0, core_1.info)(`invalid JSON response status : ${status}`);
                     }
                 }
             }
             catch (err) {
-                console.log(`failed to contact endpoint : ${err}`);
+                (0, core_1.info)(`failed to contact endpoint : ${err}`);
             }
             yield (0, utils_1.sleep)(1000);
         }
         (0, core_1.endGroup)();
+        (0, core_1.error)(`Failed to contact py-youwol after ${timeout} seconds`);
         return false;
     });
 }
@@ -10946,7 +10940,12 @@ function uploadLogsOnFailure(state) {
     return __awaiter(this, void 0, void 0, function* () {
         if (fs_1.default.existsSync(state.logsPath)) {
             const artifactClient = (0, artifact_1.create)();
-            yield artifactClient.uploadArtifact(`${state.name}_failure`, [state.logsPath], state.workingDir);
+            try {
+                yield artifactClient.uploadArtifact(`${state.name}_failure`, [state.logsPath], state.workingDir);
+            }
+            catch (err) {
+                (0, core_1.error)(`Failed to upload logs on failure : ${err}`);
+            }
         }
     });
 }

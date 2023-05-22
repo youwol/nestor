@@ -1,5 +1,5 @@
 import { create } from '@actions/artifact'
-import { endGroup, setFailed, startGroup, warning } from '@actions/core'
+import { endGroup, error, setFailed, startGroup, warning } from '@actions/core'
 import { exec } from '@actions/exec'
 import * as glob from '@actions/glob'
 import fs from 'fs'
@@ -16,11 +16,13 @@ export async function run() {
         let stopped = false
         startGroup('stopping py-youwol')
         if (!fs.existsSync(state.stopScriptPath)) {
-            setFailed(`Cannot find script ${state.stopScriptPath}`)
+            setFailed(
+                `Job failed because py-youwol stopping script ${state.stopScriptPath} does not exist`,
+            )
         } else {
             const result = await exec('sh', [state.stopScriptPath])
             if (result !== 0) {
-                setFailed('Failed to stop py-youwol')
+                setFailed('Job failed because py-youwol failed to stop')
             } else {
                 stopped = true
             }
@@ -53,20 +55,24 @@ export async function run() {
             endGroup()
         }
     } catch (err) {
-        await uploadLogsOnFailure(state)
-        setFailed(`Failed to properly stop py-youwol: ${err}`)
+        let err_msg
+        if (err instanceof Error) {
+            err_msg = err.message
+        } else {
+            err_msg = `error of type ${typeof err}`
+        }
+        setFailed(`Job failed because of unexpected error : ${err_msg}`)
     } finally {
         await uploadFiles(state, artifacts)
     }
 }
 
 async function uploadFiles(state: State, artifacts: string[]): Promise<void> {
+    const title = 'Py-youwol execution artifacts'
     const artifactClient = create()
     artifacts
         .filter((path) => !fs.existsSync(path))
-        .forEach((path) =>
-            warning(`File not found: ${path}`, { title: 'Artifacts' }),
-        )
+        .forEach((path) => warning(`File not found: ${path}`, { title }))
     const finalArtifacts = artifacts.filter((path) => fs.existsSync(path))
 
     try {
@@ -77,8 +83,9 @@ async function uploadFiles(state: State, artifacts: string[]): Promise<void> {
         )
     } catch (err) {
         await uploadLogsOnFailure(state)
-        setFailed(`Failed to upload artifacts: ${err}`)
+        error(`Upload failed : ${err}`, { title })
+        setFailed(`Job failed because upload of artifacts failed`)
     }
 }
 
-run().catch((error) => setFailed('Workflow failed! ' + error.message))
+run().catch((error) => setFailed(`Job failed to execute : ${error.message}`))

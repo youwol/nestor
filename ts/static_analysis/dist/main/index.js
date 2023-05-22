@@ -3964,9 +3964,9 @@ function run() {
         const skips = (0, core_1.getInput)('skip')
             .split(' ')
             .map((skip) => skip.trim());
+        const title = 'Static Analysis';
         try {
             (0, core_1.debug)('Starting action');
-            const title = 'Static Analysis';
             const results = [
                 yield runCheck('audit', run_audit, skips),
                 yield runCheck('eslint', run_eslint, skips),
@@ -3976,17 +3976,18 @@ function run() {
                 (0, core_1.warning)('Some checks skipped', { title });
             }
             if (results.some((result) => result === 'failure')) {
-                (0, core_1.setFailed)('Static analysis failed');
+                (0, core_1.setFailed)('Job failed because some static analysis checks failed');
             }
         }
         catch (err) {
+            let err_msg;
             if (err instanceof Error) {
-                (0, core_1.setFailed)(err.message);
+                err_msg = err.message;
             }
             else {
-                (0, core_1.error)(typeof err);
-                (0, core_1.setFailed)('Unexpected error');
+                err_msg = `error of type ${typeof err}`;
             }
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
     });
 }

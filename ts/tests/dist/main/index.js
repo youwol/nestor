@@ -3964,7 +3964,6 @@ function run() {
         const coverage = (0, core_1.getInput)('coverage') === 'true';
         try {
             (0, core_1.debug)('Starting action');
-            const title = 'Tests';
             (0, core_1.startGroup)('Run tests');
             let result = 0;
             const args = ['--reporters=default', '--reporters=github-actions'];
@@ -3979,19 +3978,19 @@ function run() {
                 });
             }
             if (result !== 0) {
-                (0, core_1.error)('Tests have failure. See logs.', { title });
-                (0, core_1.setFailed)('Test failed');
+                (0, core_1.setFailed)('Job failed because some tests failed');
             }
             (0, core_1.endGroup)();
         }
         catch (err) {
+            let err_msg;
             if (err instanceof Error) {
-                (0, core_1.setFailed)(err.message);
+                err_msg = err.message;
             }
             else {
-                (0, core_1.error)(typeof err);
-                (0, core_1.setFailed)('Unexpected error');
+                err_msg = `error of type ${typeof err}`;
             }
+            (0, core_1.setFailed)(`Job failed because of unexpected error : ${err_msg}`);
         }
     });
 }
