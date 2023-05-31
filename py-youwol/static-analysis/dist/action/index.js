@@ -3971,6 +3971,10 @@ function run() {
             const title = 'Static Analysis';
             const results = [
                 yield runCheck('version_monotony', checkVersionMonotony, skips),
+                yield runCheck('imports', checkISort, skips),
+                yield runCheck('formatting', checkBlack, skips),
+                yield runCheck('pep8', checkPyCodeStyle, skips),
+                yield runCheck('audit', checkAudit, skips),
                 yield checkGitCleanness(skips),
             ];
             if (results.some((result) => result === 'skipped')) {
@@ -4001,14 +4005,131 @@ function runCheck(name, check, skips) {
             return 'skipped';
         }
         (0, core_1.startGroup)(name);
-        const result = yield check();
+        const result = yield check(title);
         (0, core_1.endGroup)();
         return result;
     });
 }
-function checkVersionMonotony() {
+function isPyCodeStyleLine(v) {
+    return (typeof v === 'object' &&
+        v !== null &&
+        'filename' in v &&
+        'row' in v &&
+        'col' in v &&
+        'message' in v);
+}
+function checkPyCodeStyle(title) {
     return __awaiter(this, void 0, void 0, function* () {
-        const title = 'Static Analysis: version_monotony';
+        const customFormat = '{"filename":"%(path)s", "row":%(row)d, "col":%(col)d, "message":"[%(code)s] %(text)s"}';
+        function stdline(line) {
+            try {
+                const json = JSON.parse(line);
+                if (isPyCodeStyleLine(json)) {
+                    (0, core_1.error)(json.message, {
+                        title,
+                        file: json.filename,
+                        startColumn: json.col,
+                        startLine: json.row,
+                    });
+                }
+                else {
+                    (0, core_1.warning)(`Object does not conform to PyCodeStyleLine interface : ${line}`, { title });
+                }
+            }
+            catch (err) {
+                (0, core_1.warning)(`Cannot parse output line '${line}' : ${err}`, { title });
+            }
+        }
+        const result = yield (0, exec_1.exec)('pycodestyle', ['src', `--format=${customFormat}`], {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        });
+        if (result !== 0) {
+            (0, core_1.error)(`pycodestyle return non zero exit code ${result}`, { title });
+            return 'failure';
+        }
+        return 'ok';
+    });
+}
+function checkISort(title) {
+    return __awaiter(this, void 0, void 0, function* () {
+        function errline(line) {
+            if (line.startsWith('ERROR: ')) {
+                const endFilename = line.indexOf(' ', 8);
+                const file = line.substring(8, endFilename);
+                (0, core_1.error)(line.substring(endFilename + 1), { title, file });
+            }
+        }
+        const result = yield (0, exec_1.exec)('isort', ['src', '--check'], {
+            ignoreReturnCode: true,
+            listeners: { errline },
+        });
+        if (result !== 0) {
+            (0, core_1.error)(`isort return non zero exit code ${result}`, { title });
+            return 'failure';
+        }
+        return 'ok';
+    });
+}
+function checkBlack(title) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield (0, exec_1.exec)('black', ['src', '--check'], {
+            ignoreReturnCode: true,
+        });
+        if (result !== 0) {
+            (0, core_1.error)(`black return non zero exit code ${result}`, { title });
+            return 'failure';
+        }
+        return 'ok';
+    });
+}
+//
+// function isAuditEntry(v: unknown): v is AuditEntry {
+//     return (
+//         typeof v === 'object' &&
+//         v !== null &&
+//         'name' in v &&
+//         'version' in v &&
+//         'vulns' in v
+//     )
+// }
+//
+function isAuditOutput(v) {
+    return typeof v === 'object' && v !== null && 'dependencies' in v;
+}
+function checkAudit(title) {
+    return __awaiter(this, void 0, void 0, function* () {
+        function stdline(line) {
+            try {
+                const json = JSON.parse(line);
+                if (isAuditOutput(json)) {
+                    json.dependencies.forEach((entry) => entry.vulns.forEach((vulnerability) => (0, core_1.error)(`Package ${entry.name}@${entry.version} has vulnerability:\n[${vulnerability.id}] : ${vulnerability.description}`, { title })));
+                }
+                else {
+                    (0, core_1.warning)(`Object does not conform to PyCodeStyleLine interface : ${line}`, { title });
+                }
+            }
+            catch (err) {
+                (0, core_1.warning)(`Cannot parse output line '${line}' : ${err}`, { title });
+            }
+        }
+        const result = yield (0, exec_1.exec)('pip-audit', [
+            '--format=json',
+            '--require-hashes',
+            '--requirement=requirements-dev.txt',
+        ], {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        });
+        if (result !== 0) {
+            (0, core_1.error)(`Audit return non zero exit code ${result}`, { title });
+            return 'failure';
+        }
+        return 'ok';
+    });
+}
+function checkVersionMonotony(title) {
+    return __awaiter(this, void 0, void 0, function* () {
         let output = '';
         function stdline(line) {
             output += line;
@@ -4042,7 +4163,7 @@ function checkVersionMonotony() {
 }
 function checkGitCleanness(skips) {
     return __awaiter(this, void 0, void 0, function* () {
-        const title = 'Build: git cleanness';
+        const title = 'Static Analysis: git cleanness';
         if (skips.includes('cleanness')) {
             (0, core_1.warning)('Skipping git cleanness check', {
                 title,

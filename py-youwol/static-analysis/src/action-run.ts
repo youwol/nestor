@@ -32,6 +32,10 @@ export async function run(): Promise<void> {
 
         const results = [
             await runCheck('version_monotony', checkVersionMonotony, skips),
+            await runCheck('imports', checkISort, skips),
+            await runCheck('formatting', checkBlack, skips),
+            await runCheck('pep8', checkPyCodeStyle, skips),
+            await runCheck('audit', checkAudit, skips),
             await checkGitCleanness(skips),
         ]
 
@@ -55,7 +59,7 @@ export async function run(): Promise<void> {
 
 async function runCheck(
     name: string,
-    check: () => Promise<CheckStatus>,
+    check: (title: string) => Promise<CheckStatus>,
     skips: string[],
 ): Promise<CheckStatus> {
     const title = `Static Analysis: ${name}`
@@ -65,14 +69,183 @@ async function runCheck(
     }
 
     startGroup(name)
-    const result = await check()
+    const result = await check(title)
     endGroup()
     return result
 }
 
-async function checkVersionMonotony(): Promise<CheckStatus> {
-    const title = 'Static Analysis: version_monotony'
+interface PyCodeStyleLine {
+    filename: string
+    row: number
+    col: number
+    message: string
+}
 
+function isPyCodeStyleLine(v: unknown): v is PyCodeStyleLine {
+    return (
+        typeof v === 'object' &&
+        v !== null &&
+        'filename' in v &&
+        'row' in v &&
+        'col' in v &&
+        'message' in v
+    )
+}
+
+async function checkPyCodeStyle(title: string): Promise<CheckStatus> {
+    const customFormat =
+        '{"filename":"%(path)s", "row":%(row)d, "col":%(col)d, "message":"[%(code)s] %(text)s"}'
+
+    function stdline(line: string) {
+        try {
+            const json = JSON.parse(line)
+            if (isPyCodeStyleLine(json)) {
+                error(json.message, {
+                    title,
+                    file: json.filename,
+                    startColumn: json.col,
+                    startLine: json.row,
+                })
+            } else {
+                warning(
+                    `Object does not conform to PyCodeStyleLine interface : ${line}`,
+                    { title },
+                )
+            }
+        } catch (err) {
+            warning(`Cannot parse output line '${line}' : ${err}`, { title })
+        }
+    }
+
+    const result = await exec(
+        'pycodestyle',
+        ['src', `--format=${customFormat}`],
+        {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        },
+    )
+
+    if (result !== 0) {
+        error(`pycodestyle return non zero exit code ${result}`, { title })
+        return 'failure'
+    }
+
+    return 'ok'
+}
+
+async function checkISort(title: string): Promise<CheckStatus> {
+    function errline(line: string) {
+        if (line.startsWith('ERROR: ')) {
+            const endFilename = line.indexOf(' ', 8)
+            const file = line.substring(8, endFilename)
+            error(line.substring(endFilename + 1), { title, file })
+        }
+    }
+
+    const result = await exec('isort', ['src', '--check'], {
+        ignoreReturnCode: true,
+        listeners: { errline },
+    })
+
+    if (result !== 0) {
+        error(`isort return non zero exit code ${result}`, { title })
+        return 'failure'
+    }
+
+    return 'ok'
+}
+
+async function checkBlack(title: string): Promise<CheckStatus> {
+    const result = await exec('black', ['src', '--check'], {
+        ignoreReturnCode: true,
+    })
+
+    if (result !== 0) {
+        error(`black return non zero exit code ${result}`, { title })
+        return 'failure'
+    }
+
+    return 'ok'
+}
+
+interface AuditVulnerability {
+    id: string
+    fix_versions: string[]
+    description: string
+}
+
+interface AuditEntry {
+    name: string
+    version: string
+    vulns: AuditVulnerability[]
+}
+
+interface AuditOutput {
+    dependencies: AuditEntry[]
+}
+
+//
+// function isAuditEntry(v: unknown): v is AuditEntry {
+//     return (
+//         typeof v === 'object' &&
+//         v !== null &&
+//         'name' in v &&
+//         'version' in v &&
+//         'vulns' in v
+//     )
+// }
+//
+function isAuditOutput(v: unknown): v is AuditOutput {
+    return typeof v === 'object' && v !== null && 'dependencies' in v
+}
+
+async function checkAudit(title: string): Promise<CheckStatus> {
+    function stdline(line: string) {
+        try {
+            const json = JSON.parse(line)
+            if (isAuditOutput(json)) {
+                json.dependencies.forEach((entry) =>
+                    entry.vulns.forEach((vulnerability) =>
+                        error(
+                            `Package ${entry.name}@${entry.version} has vulnerability:\n[${vulnerability.id}] : ${vulnerability.description}`,
+                            { title },
+                        ),
+                    ),
+                )
+            } else {
+                warning(
+                    `Object does not conform to PyCodeStyleLine interface : ${line}`,
+                    { title },
+                )
+            }
+        } catch (err) {
+            warning(`Cannot parse output line '${line}' : ${err}`, { title })
+        }
+    }
+
+    const result = await exec(
+        'pip-audit',
+        [
+            '--format=json',
+            '--require-hashes',
+            '--requirement=requirements-dev.txt',
+        ],
+        {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        },
+    )
+
+    if (result !== 0) {
+        error(`Audit return non zero exit code ${result}`, { title })
+        return 'failure'
+    }
+
+    return 'ok'
+}
+
+async function checkVersionMonotony(title: string): Promise<CheckStatus> {
     let output = ''
 
     function stdline(line: string) {
@@ -120,7 +293,7 @@ async function checkVersionMonotony(): Promise<CheckStatus> {
 }
 
 async function checkGitCleanness(skips: string[]): Promise<CheckStatus> {
-    const title = 'Build: git cleanness'
+    const title = 'Static Analysis: git cleanness'
     if (skips.includes('cleanness')) {
         warning('Skipping git cleanness check', {
             title,
