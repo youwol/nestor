@@ -3975,6 +3975,7 @@ function run() {
                 yield runCheck('formatting', checkBlack, skips),
                 yield runCheck('pep8', checkPyCodeStyle, skips),
                 yield runCheck('audit', checkAudit, skips),
+                yield runCheck('pylint', checkPyLint, skips),
                 yield checkGitCleanness(skips),
             ];
             if (results.some((result) => result === 'skipped')) {
@@ -4017,6 +4018,55 @@ function isPyCodeStyleLine(v) {
         'row' in v &&
         'col' in v &&
         'message' in v);
+}
+function isPyLintEntries(v) {
+    if (Array.isArray(v)) {
+        return v.every((e) => isPylintEntry(e));
+    }
+    return false;
+}
+function isPylintEntry(v) {
+    return (typeof v === 'object' &&
+        v !== null &&
+        'type' in v &&
+        'message' in v &&
+        'symbol' in v &&
+        'path' in v &&
+        'line' in v &&
+        'column' in v &&
+        'message-id' in v);
+}
+function checkPyLint(title) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let output = '';
+        function stdout(data) {
+            output += data.toString();
+        }
+        const result = yield (0, exec_1.exec)('pylint', ['src', '--output-format=json'], {
+            ignoreReturnCode: true,
+            listeners: { stdout },
+        });
+        const json = JSON.parse(output);
+        if (isPyLintEntries(json)) {
+            json.forEach((entry) => {
+                var _a, _b;
+                const msg = `[${entry['message-id']}] ${entry.message} (${entry.symbol})`;
+                const properties = {
+                    file: entry.path,
+                    startLine: entry.line,
+                    startColumn: entry.column,
+                    endLine: (_a = entry.endLine) !== null && _a !== void 0 ? _a : undefined,
+                    endColumn: (_b = entry.endColumn) !== null && _b !== void 0 ? _b : undefined,
+                };
+                (0, core_1.error)(msg, properties);
+            });
+        }
+        if (result !== 0) {
+            (0, core_1.error)(`pylint return non zero exit code ${result}`, { title });
+            return 'failure';
+        }
+        return 'ok';
+    });
 }
 function checkPyCodeStyle(title) {
     return __awaiter(this, void 0, void 0, function* () {

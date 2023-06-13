@@ -36,6 +36,7 @@ export async function run(): Promise<void> {
             await runCheck('formatting', checkBlack, skips),
             await runCheck('pep8', checkPyCodeStyle, skips),
             await runCheck('audit', checkAudit, skips),
+            await runCheck('pylint', checkPyLint, skips),
             await checkGitCleanness(skips),
         ]
 
@@ -90,6 +91,74 @@ function isPyCodeStyleLine(v: unknown): v is PyCodeStyleLine {
         'col' in v &&
         'message' in v
     )
+}
+
+interface PyLintEntry {
+    type: string
+    message: string
+    symbol: string
+    path: string
+    line: number
+    column: number
+    endLine: number | null
+    endColumn: number | null
+    'message-id': string
+}
+
+function isPyLintEntries(v: unknown): v is PyLintEntry[] {
+    if (Array.isArray(v)) {
+        return v.every((e) => isPylintEntry(e))
+    }
+    return false
+}
+
+function isPylintEntry(v: unknown): v is PyLintEntry {
+    return (
+        typeof v === 'object' &&
+        v !== null &&
+        'type' in v &&
+        'message' in v &&
+        'symbol' in v &&
+        'path' in v &&
+        'line' in v &&
+        'column' in v &&
+        'message-id' in v
+    )
+}
+
+async function checkPyLint(title: string): Promise<CheckStatus> {
+    let output = ''
+
+    function stdout(data: Buffer) {
+        output += data.toString()
+    }
+
+    const result = await exec('pylint', ['src', '--output-format=json'], {
+        ignoreReturnCode: true,
+        listeners: { stdout },
+    })
+
+    const json = JSON.parse(output)
+    if (isPyLintEntries(json)) {
+        json.forEach((entry) => {
+            const msg = `[${entry['message-id']}] ${entry.message} (${entry.symbol})`
+            const properties = {
+                file: entry.path,
+                startLine: entry.line,
+                startColumn: entry.column,
+                endLine: entry.endLine ?? undefined,
+                endColumn: entry.endColumn ?? undefined,
+            }
+            error(msg, properties)
+        })
+    }
+
+    if (result !== 0) {
+        error(`pylint return non zero exit code ${result}`, { title })
+        return 'failure'
+    }
+
+    return 'ok'
 }
 
 async function checkPyCodeStyle(title: string): Promise<CheckStatus> {
