@@ -10796,10 +10796,7 @@ function run() {
         if (pathPyYouwolSources === undefined) {
             throw Error('Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?');
         }
-        const pathConf = (0, core_1.getInput)('conf');
-        if (pathConf === undefined) {
-            throw Error('No configuration file specified');
-        }
+        const pathConf = `${pathPyYouwolSources}/integrations/yw_config.py`;
         const coverage = (0, core_1.getInput)('coverage') === 'true';
         const coverageOmit = (0, core_1.getInput)('coverageOmit');
         const name = (0, core_1.getInput)('name');

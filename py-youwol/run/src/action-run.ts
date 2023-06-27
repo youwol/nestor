@@ -36,10 +36,7 @@ export async function run(): Promise<void> {
             'Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?',
         )
     }
-    const pathConf = getInput('conf')
-    if (pathConf === undefined) {
-        throw Error('No configuration file specified')
-    }
+    const pathConf = `${pathPyYouwolSources}/integrations/yw_config.py`
     const coverage = getInput('coverage') === 'true'
     const coverageOmit = getInput('coverageOmit')
     const name = getInput('name')
