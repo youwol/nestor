@@ -7,6 +7,10 @@ inputs:
     description: |
       base name for artifacts
     default: 'py-youwol'
+  conf:
+    required: false
+    description: |
+      absolute path of the config script
   coverage:
     required: false
     description: |

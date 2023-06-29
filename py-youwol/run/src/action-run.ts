@@ -25,25 +25,18 @@ export async function run(): Promise<void> {
         )
     }
     const pathPyYouwolBinCoverage = process.env['PY_YOUWOL_BIN_COVERAGE']
-    if (pathPyYouwolBinCoverage === undefined) {
-        throw Error(
-            'Env variable PY_YOUWOL_BIN_COVERAGE not set. Did you run py/prepare ?',
-        )
-    }
     const pathPyYouwolSources = process.env['PY_YOUWOL_SOURCES']
-    if (pathPyYouwolSources === undefined) {
-        throw Error(
-            'Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?',
-        )
-    }
-    const pathConf = `${pathPyYouwolSources}/integrations/yw_config.py`
+
     const coverage = getInput('coverage') === 'true'
     const coverageOmit = getInput('coverageOmit')
     const name = getInput('name')
     const workingDir = `${os.tmpdir()}/${name}_start_py-youwol`
     const stopScriptPath = `${workingDir}/py-youwol.shutdown.sh`
     const logsPath = `${workingDir}/py-youwol.log`
-
+    const pathConf =
+        getInput('conf') !== ''
+            ? getInput('conf')
+            : `${pathPyYouwolSources}/integrations/yw_config.py`
     await mkdirP(workingDir)
     process.chdir(workingDir)
     const state = {
@@ -61,6 +54,16 @@ export async function run(): Promise<void> {
         const title = 'Run py-youwol'
         let child
         if (coverage) {
+            if (pathPyYouwolBinCoverage === undefined) {
+                throw Error(
+                    'Env variable PY_YOUWOL_BIN_COVERAGE not set. Did you run py/prepare ?',
+                )
+            }
+            if (pathPyYouwolSources === undefined) {
+                throw Error(
+                    'Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?',
+                )
+            }
             startGroup(
                 `start coverage of ${pathPyYouwolBin} with conf ${pathConf}`,
             )

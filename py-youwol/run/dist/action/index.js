@@ -10789,20 +10789,16 @@ function run() {
             throw Error('Env variable PY_YOUWOL_BIN not set. Did you run py/prepare ?');
         }
         const pathPyYouwolBinCoverage = process.env['PY_YOUWOL_BIN_COVERAGE'];
-        if (pathPyYouwolBinCoverage === undefined) {
-            throw Error('Env variable PY_YOUWOL_BIN_COVERAGE not set. Did you run py/prepare ?');
-        }
         const pathPyYouwolSources = process.env['PY_YOUWOL_SOURCES'];
-        if (pathPyYouwolSources === undefined) {
-            throw Error('Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?');
-        }
-        const pathConf = `${pathPyYouwolSources}/integrations/yw_config.py`;
         const coverage = (0, core_1.getInput)('coverage') === 'true';
         const coverageOmit = (0, core_1.getInput)('coverageOmit');
         const name = (0, core_1.getInput)('name');
         const workingDir = `${os.tmpdir()}/${name}_start_py-youwol`;
         const stopScriptPath = `${workingDir}/py-youwol.shutdown.sh`;
         const logsPath = `${workingDir}/py-youwol.log`;
+        const pathConf = (0, core_1.getInput)('conf') !== ''
+            ? (0, core_1.getInput)('conf')
+            : `${pathPyYouwolSources}/integrations/yw_config.py`;
         yield (0, io_1.mkdirP)(workingDir);
         process.chdir(workingDir);
         const state = {
@@ -10819,6 +10815,12 @@ function run() {
             const title = 'Run py-youwol';
             let child;
             if (coverage) {
+                if (pathPyYouwolBinCoverage === undefined) {
+                    throw Error('Env variable PY_YOUWOL_BIN_COVERAGE not set. Did you run py/prepare ?');
+                }
+                if (pathPyYouwolSources === undefined) {
+                    throw Error('Env variable PY_YOUWOL_SOURCES not set. Did you run py/prepare ?');
+                }
                 (0, core_1.startGroup)(`start coverage of ${pathPyYouwolBin} with conf ${pathConf}`);
                 let omit = pathConf;
                 if (coverageOmit !== undefined && coverageOmit.trim() !== '') {
