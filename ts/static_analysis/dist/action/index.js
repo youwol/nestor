@@ -4023,20 +4023,25 @@ function isAuditAdvisory(v) {
 function run_audit(acceptedGhsaIds) {
     return __awaiter(this, void 0, void 0, function* () {
         let fatalGhsaIds = false;
-        const foundGhsaIds = new Set(acceptedGhsaIds);
+        const notFoundAcceptedGhsaIds = new Set(acceptedGhsaIds);
+        const foundGhsaIds = [];
         function output_cb(json) {
             if (isAuditAdvisory(json)) {
-                const advisoryId = json.data.advisory.github_advisory_id;
                 const title = 'Audit: Vulnerability';
-                if (acceptedGhsaIds.indexOf(advisoryId) <= -1) {
-                    fatalGhsaIds = true;
-                    (0, core_1.error)(`found fatal advisory ${advisoryId}`, {
-                        title,
-                    });
-                }
-                else {
-                    foundGhsaIds.delete(advisoryId);
-                    (0, core_1.warning)(`accepting ghsaId ${advisoryId}`, { title });
+                const ghsaId = json.data.advisory.github_advisory_id;
+                if (foundGhsaIds.indexOf(ghsaId) <= -1) {
+                    foundGhsaIds.push(ghsaId);
+                    if (acceptedGhsaIds.indexOf(ghsaId) <= -1) {
+                        fatalGhsaIds = true;
+                        (0, core_1.error)(`found fatal advisory ${ghsaId}`, {
+                            title,
+                        });
+                    }
+                    else {
+                        if (notFoundAcceptedGhsaIds.delete(ghsaId)) {
+                            (0, core_1.warning)(`accepting ghsaId ${ghsaId}`, { title });
+                        }
+                    }
                 }
             }
             if (isAuditSummary(json)) {
@@ -4057,7 +4062,7 @@ function run_audit(acceptedGhsaIds) {
             }
         }
         const result = yield (0, step_executor_1.execute_with_json_output)('yarn', ['-s', 'audit', '--json'], output_cb);
-        foundGhsaIds.forEach((ghsaId) => (0, core_1.warning)(`Accepted GHSA id ${ghsaId} not found`, {
+        notFoundAcceptedGhsaIds.forEach((ghsaId) => (0, core_1.warning)(`Accepted GHSA id ${ghsaId} not found`, {
             title: 'Audit: Vulnerability not found',
         }));
         if (result !== 'ok') {

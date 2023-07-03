@@ -120,20 +120,25 @@ function isAuditAdvisory(v: unknown): v is AuditAdvisory {
 
 async function run_audit(acceptedGhsaIds: string[]): Promise<CheckStatus> {
     let fatalGhsaIds = false
-    const foundGhsaIds = new Set(acceptedGhsaIds)
+    const notFoundAcceptedGhsaIds = new Set(acceptedGhsaIds)
+    const foundGhsaIds: string[] = []
 
     function output_cb(json: unknown) {
         if (isAuditAdvisory(json)) {
-            const advisoryId = json.data.advisory.github_advisory_id
             const title = 'Audit: Vulnerability'
-            if (acceptedGhsaIds.indexOf(advisoryId) <= -1) {
-                fatalGhsaIds = true
-                error(`found fatal advisory ${advisoryId}`, {
-                    title,
-                })
-            } else {
-                foundGhsaIds.delete(advisoryId)
-                warning(`accepting ghsaId ${advisoryId}`, { title })
+            const ghsaId = json.data.advisory.github_advisory_id
+            if (foundGhsaIds.indexOf(ghsaId) <= -1) {
+                foundGhsaIds.push(ghsaId)
+                if (acceptedGhsaIds.indexOf(ghsaId) <= -1) {
+                    fatalGhsaIds = true
+                    error(`found fatal advisory ${ghsaId}`, {
+                        title,
+                    })
+                } else {
+                    if (notFoundAcceptedGhsaIds.delete(ghsaId)) {
+                        warning(`accepting ghsaId ${ghsaId}`, { title })
+                    }
+                }
             }
         }
         if (isAuditSummary(json)) {
@@ -162,7 +167,7 @@ async function run_audit(acceptedGhsaIds: string[]): Promise<CheckStatus> {
         ['-s', 'audit', '--json'],
         output_cb,
     )
-    foundGhsaIds.forEach((ghsaId) =>
+    notFoundAcceptedGhsaIds.forEach((ghsaId) =>
         warning(`Accepted GHSA id ${ghsaId} not found`, {
             title: 'Audit: Vulnerability not found',
         }),
