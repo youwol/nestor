@@ -27,11 +27,14 @@ export async function run(): Promise<void> {
     const skips = getInput('skip')
         .split(' ')
         .map((skip) => skip.trim())
+    const acceptedGhsaIds = getInput('acceptedGhsaIds')
+        .split(' ')
+        .map((ghsaId) => ghsaId.trim())
     const title = 'Static Analysis'
     try {
         debug('Starting action')
         const results = [
-            await runCheck('audit', run_audit, skips),
+            await runCheck('audit', get_run_audit(acceptedGhsaIds), skips),
             await runCheck('eslint', run_eslint, skips),
             await runCheck('prettier', run_prettier, skips),
         ]
@@ -97,8 +100,42 @@ function isAuditSummary(v: unknown): v is AuditSummary {
     )
 }
 
-async function run_audit(): Promise<CheckStatus> {
+interface AuditAdvisory {
+    type: 'auditAdvisory'
+    data: {
+        advisory: {
+            github_advisory_id: string
+        }
+    }
+}
+
+function isAuditAdvisory(v: unknown): v is AuditAdvisory {
+    return (
+        typeof v === 'object' &&
+        v !== null &&
+        'type' in v &&
+        (v as { type: string }).type === 'auditAdvisory'
+    )
+}
+
+async function run_audit(acceptedGhsaIds: string[]): Promise<CheckStatus> {
+    let fatalGhsaIds = false
+    const foundGhsaIds = new Set(acceptedGhsaIds)
+
     function output_cb(json: unknown) {
+        if (isAuditAdvisory(json)) {
+            const advisoryId = json.data.advisory.github_advisory_id
+            const title = 'Audit: Vulnerability'
+            if (acceptedGhsaIds.indexOf(advisoryId) <= -1) {
+                fatalGhsaIds = true
+                error(`found fatal advisory ${advisoryId}`, {
+                    title,
+                })
+            } else {
+                foundGhsaIds.delete(advisoryId)
+                warning(`accepting ghsaId ${advisoryId}`, { title })
+            }
+        }
         if (isAuditSummary(json)) {
             const data = json.data
             notice(
@@ -115,16 +152,30 @@ async function run_audit(): Promise<CheckStatus> {
             vuln_msg +=
                 vulns.critical !== 0 ? `critical: ${vulns.critical}` : ''
             if (vuln_msg !== '') {
-                error(vuln_msg, { title: 'Audit: Vulnerabilities' })
+                warning(vuln_msg, { title: 'Audit: Vulnerabilities' })
             }
         }
     }
 
-    return execute_with_json_output(
+    const result = await execute_with_json_output(
         'yarn',
         ['-s', 'audit', '--json'],
         output_cb,
     )
+    foundGhsaIds.forEach((ghsaId) =>
+        warning(`Accepted GHSA id ${ghsaId} not found`, {
+            title: 'Audit: Vulnerability not found',
+        }),
+    )
+    if (result !== 'ok') {
+        return fatalGhsaIds ? 'failure' : 'ok'
+    } else {
+        return result
+    }
+}
+
+function get_run_audit(acceptedGhsaIds: string[]): () => Promise<CheckStatus> {
+    return () => run_audit(acceptedGhsaIds)
 }
 
 interface EslintOutput {

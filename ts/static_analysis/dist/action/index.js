@@ -3964,11 +3964,14 @@ function run() {
         const skips = (0, core_1.getInput)('skip')
             .split(' ')
             .map((skip) => skip.trim());
+        const acceptedGhsaIds = (0, core_1.getInput)('acceptedGhsaIds')
+            .split(' ')
+            .map((ghsaId) => ghsaId.trim());
         const title = 'Static Analysis';
         try {
             (0, core_1.debug)('Starting action');
             const results = [
-                yield runCheck('audit', run_audit, skips),
+                yield runCheck('audit', get_run_audit(acceptedGhsaIds), skips),
                 yield runCheck('eslint', run_eslint, skips),
                 yield runCheck('prettier', run_prettier, skips),
             ];
@@ -4011,9 +4014,31 @@ function isAuditSummary(v) {
         'type' in v &&
         v.type === 'auditSummary');
 }
-function run_audit() {
+function isAuditAdvisory(v) {
+    return (typeof v === 'object' &&
+        v !== null &&
+        'type' in v &&
+        v.type === 'auditAdvisory');
+}
+function run_audit(acceptedGhsaIds) {
     return __awaiter(this, void 0, void 0, function* () {
+        let fatalGhsaIds = false;
+        const foundGhsaIds = new Set(acceptedGhsaIds);
         function output_cb(json) {
+            if (isAuditAdvisory(json)) {
+                const advisoryId = json.data.advisory.github_advisory_id;
+                const title = 'Audit: Vulnerability';
+                if (acceptedGhsaIds.indexOf(advisoryId) <= -1) {
+                    fatalGhsaIds = true;
+                    (0, core_1.error)(`found fatal advisory ${advisoryId}`, {
+                        title,
+                    });
+                }
+                else {
+                    foundGhsaIds.delete(advisoryId);
+                    (0, core_1.warning)(`accepting ghsaId ${advisoryId}`, { title });
+                }
+            }
             if (isAuditSummary(json)) {
                 const data = json.data;
                 (0, core_1.notice)(`${data.totalDependencies} dependencies (dev: ${data.devDependencies}, optional: ${data.optionalDependencies})`, { title: 'Audit: Dependencies' });
@@ -4027,12 +4052,24 @@ function run_audit() {
                 vuln_msg +=
                     vulns.critical !== 0 ? `critical: ${vulns.critical}` : '';
                 if (vuln_msg !== '') {
-                    (0, core_1.error)(vuln_msg, { title: 'Audit: Vulnerabilities' });
+                    (0, core_1.warning)(vuln_msg, { title: 'Audit: Vulnerabilities' });
                 }
             }
         }
-        return (0, step_executor_1.execute_with_json_output)('yarn', ['-s', 'audit', '--json'], output_cb);
+        const result = yield (0, step_executor_1.execute_with_json_output)('yarn', ['-s', 'audit', '--json'], output_cb);
+        foundGhsaIds.forEach((ghsaId) => (0, core_1.warning)(`Accepted GHSA id ${ghsaId} not found`, {
+            title: 'Audit: Vulnerability not found',
+        }));
+        if (result !== 'ok') {
+            return fatalGhsaIds ? 'failure' : 'ok';
+        }
+        else {
+            return result;
+        }
     });
+}
+function get_run_audit(acceptedGhsaIds) {
+    return () => run_audit(acceptedGhsaIds);
 }
 function isEslintOutput(v) {
     return typeof v === 'object' && v !== null && 'filePath' in v;

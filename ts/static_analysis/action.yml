@@ -7,6 +7,11 @@ inputs:
     description: |
       list of steps to skip : audit, eslint, prettier
     default: ''
+  acceptedGhsaIds:
+    required: false
+    description: |
+      list of ghsaId to accept (they will still generated a warning)
+    default: ''
 runs:
   using: node16
   main: 'dist/action/index.js'
