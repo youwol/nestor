@@ -44,6 +44,8 @@ on:
         required: true
       PASSWORD_INTEGRATION_TESTS_BIS:
         required: true
+      CLIENT_SECRET_INTEGRATION_TESTS:
+        required: true
 
 
 
@@ -77,6 +79,7 @@ jobs:
           PASSWORD_INTEGRATION_TESTS: ${{ secrets.PASSWORD_INTEGRATION_TESTS }}
           USERNAME_INTEGRATION_TESTS_BIS: ${{ secrets.USERNAME_INTEGRATION_TESTS_BIS }}
           PASSWORD_INTEGRATION_TESTS_BIS: ${{ secrets.PASSWORD_INTEGRATION_TESTS_BIS }}
+          CLIENT_SECRET_INTEGRATION_TESTS: ${{ secrets.CLIENT_SECRET_INTEGRATION_TESTS }}
         with:
           coverage: ${{ inputs.pyYouwolCoverage }}
           coverageOmit: ${{ inputs.coverageOmit }}
