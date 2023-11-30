@@ -3,11 +3,14 @@ import {
     endGroup,
     error,
     getInput,
+    info,
     notice,
     setFailed,
     startGroup,
     warning,
 } from '@actions/core'
+import * as fs from 'fs'
+import semver from 'semver/preload'
 import {
     execute_with_json_output,
     execute_with_string_output,
@@ -34,6 +37,7 @@ export async function run(): Promise<void> {
     try {
         debug('Starting action')
         const results = [
+            await runCheck('version-wip', check_version_wip, skips),
             await runCheck('audit', get_run_audit(acceptedGhsaIds), skips),
             await runCheck('eslint', run_eslint, skips),
             await runCheck('prettier', run_prettier, skips),
@@ -250,4 +254,73 @@ async function run_prettier(): Promise<CheckStatus> {
         ['-s', 'prettier', '--list-different', '.'],
         output_cb,
     )
+}
+
+interface PackageJSON {
+    version: string
+}
+
+function isPackageJSON(v: unknown): v is PackageJSON {
+    if (typeof v !== 'object') {
+        error('Expected package.json but actually not an object')
+        return false
+    } else if (v === null) {
+        error('Expected package.json but actually null')
+        return false
+    } else if (!('version' in v)) {
+        error("Expected package.json but actually no 'version' attribute")
+        return false
+    } else {
+        return true
+    }
+}
+
+async function check_version_wip(): Promise<CheckStatus> {
+    async function getPackageJSONText(): Promise<string> {
+        try {
+            return await fs.promises.readFile('package.json', 'utf-8')
+        } catch (err) {
+            throw Error(`Cannot read file 'package.json' : ${err}`)
+        }
+    }
+
+    function parsePackageJSONText(v: string): unknown {
+        try {
+            return JSON.parse(v)
+        } catch (err) {
+            throw Error(`Cannot parse file 'package.json' : ${err}`)
+        }
+    }
+
+    try {
+        const packageJSON = parsePackageJSONText(await getPackageJSONText())
+        if (!isPackageJSON(packageJSON)) {
+            error(`Unexpected package.json content`)
+            return 'failure'
+        }
+        const semVer = semver.parse(packageJSON.version)
+        if (semVer === null) {
+            error(`package.json version '${packageJSON.version}' is invalid`)
+            return 'failure'
+        }
+        if (!semVer.prerelease.some((v) => v === 'wip')) {
+            console.error(
+                `package.json version '${semVer.raw}' does not have '-wip' prerelease`,
+            )
+            return 'failure'
+        }
+        info(`version is ${semVer.raw}`)
+    } catch (err) {
+        if (
+            err !== null &&
+            typeof err === 'object' &&
+            'message' in err &&
+            typeof err.message === 'string'
+        ) {
+            error(err.message)
+        } else {
+            error(`Unexpected error : ${err}`)
+        }
+    }
+    return 'ok'
 }
