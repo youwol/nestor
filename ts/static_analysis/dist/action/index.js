@@ -7269,7 +7269,8 @@ function run() {
             .map((skip) => skip.trim());
         const acceptedGhsaIds = (0, core_1.getInput)('acceptedGhsaIds')
             .split(' ')
-            .map((ghsaId) => ghsaId.trim());
+            .map((ghsaId) => ghsaId.trim())
+            .filter((v) => v !== '');
         const title = 'Static Analysis';
         try {
             (0, core_1.debug)('Starting action');
@@ -7366,7 +7367,7 @@ function run_audit(acceptedGhsaIds) {
             }
         }
         const result = yield (0, step_executor_1.execute_with_json_output)('yarn', ['-s', 'audit', '--json'], output_cb);
-        notFoundAcceptedGhsaIds.forEach((ghsaId) => (0, core_1.warning)(`Accepted GHSA id ${ghsaId} not found`, {
+        notFoundAcceptedGhsaIds.forEach((ghsaId) => (0, core_1.warning)(`Accepted GHSA id '${ghsaId}' not found`, {
             title: 'Audit: Vulnerability not found',
         }));
         if (result !== 'ok') {

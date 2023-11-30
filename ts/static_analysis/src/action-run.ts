@@ -33,6 +33,7 @@ export async function run(): Promise<void> {
     const acceptedGhsaIds = getInput('acceptedGhsaIds')
         .split(' ')
         .map((ghsaId) => ghsaId.trim())
+        .filter((v) => v !== '')
     const title = 'Static Analysis'
     try {
         debug('Starting action')
@@ -172,7 +173,7 @@ async function run_audit(acceptedGhsaIds: string[]): Promise<CheckStatus> {
         output_cb,
     )
     notFoundAcceptedGhsaIds.forEach((ghsaId) =>
-        warning(`Accepted GHSA id ${ghsaId} not found`, {
+        warning(`Accepted GHSA id '${ghsaId}' not found`, {
             title: 'Audit: Vulnerability not found',
         }),
     )
