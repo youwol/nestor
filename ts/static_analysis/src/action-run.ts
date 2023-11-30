@@ -211,8 +211,8 @@ async function run_eslint(): Promise<CheckStatus> {
                         msg.severity === 1
                             ? warning
                             : msg.severity === 2
-                            ? error
-                            : null,
+                              ? error
+                              : null,
                     msg,
                 }))
                 .forEach(
