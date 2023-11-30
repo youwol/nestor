@@ -10,8 +10,8 @@ import {
 } from '@actions/core'
 import { exec } from '@actions/exec'
 import { rmRF } from '@actions/io'
+import * as fs from 'fs'
 
-const mainBranchPath = '.py-youwol_main'
 export type CheckStatus = 'ok' | 'failure' | 'skipped'
 
 export async function run(): Promise<void> {
@@ -23,6 +23,13 @@ export async function run(): Promise<void> {
     } else {
         process.chdir(pathPyYouwolSources)
     }
+    const targetBranchPath = getInput('targetBranchPath')
+    if (targetBranchPath === '') {
+        throw Error('Missing input targetBranchPath')
+    }
+    if (!fs.existsSync(targetBranchPath)) {
+        throw Error(`No target branch working tree at ${targetBranchPath}`)
+    }
     const skips = getInput('skip')
         .split(' ')
         .map((skip) => skip.trim())
@@ -31,7 +38,11 @@ export async function run(): Promise<void> {
         const title = 'Static Analysis'
 
         const results = [
-            await runCheck('version_monotony', checkVersionMonotony, skips),
+            await runCheck(
+                'version_monotony',
+                getCheckVersionMonotony(targetBranchPath),
+                skips,
+            ),
             await runCheck('imports', checkISort, skips),
             await runCheck('formatting', checkBlack, skips),
             await runCheck('pep8', checkPyCodeStyle, skips),
@@ -314,25 +325,34 @@ async function checkAudit(title: string): Promise<CheckStatus> {
     return 'ok'
 }
 
-async function checkVersionMonotony(title: string): Promise<CheckStatus> {
+function getCheckVersionMonotony(
+    targetBranchPath: string,
+): (title: string) => Promise<CheckStatus> {
+    return (title: string) => checkVersionMonotony(targetBranchPath, title)
+}
+
+async function checkVersionMonotony(
+    targetBranchPath: string,
+    title: string,
+): Promise<CheckStatus> {
     let output = ''
 
     function stdline(line: string) {
         output += line
     }
 
-    const result_main = await exec(
+    const result_target = await exec(
         'python3',
         [`${process.cwd()}/version_management.py`, 'get_current'],
-        { cwd: mainBranchPath, listeners: { stdline } },
+        { cwd: targetBranchPath, listeners: { stdline } },
     )
-    if (result_main !== 0) {
-        error('Failed to get version of main branch', { title })
+    if (result_target !== 0) {
+        error('Failed to get version of target branch', { title })
         return 'failure'
     }
-    await rmRF(mainBranchPath)
+    await rmRF(targetBranchPath)
 
-    const mainVersion = output.trim()
+    const targetVersion = output.trim()
 
     output = ''
     const result_current = await exec(
@@ -346,13 +366,13 @@ async function checkVersionMonotony(title: string): Promise<CheckStatus> {
     }
     const currentVersion = output.trim()
     notice(
-        `Branch version is ${currentVersion}, main branch version is ${mainVersion}`,
+        `Branch version is ${currentVersion}, target branch version is ${targetVersion}`,
         { title },
     )
     const result_check = await exec('python3', [
         'version_management.py',
         'check',
-        mainVersion,
+        targetVersion,
     ])
     if (result_check !== 0) {
         error('Failed to get current version', { title })

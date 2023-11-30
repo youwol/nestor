@@ -2,6 +2,10 @@ name: Python Static Analysis
 description: Run static analysis on py-youwol
 author: jdecharne@youwol.com
 inputs:
+  targetBranchPath:
+    required: true
+    description: |
+      path to a working tree of the target branch
   skip:
     required: false
     description: |

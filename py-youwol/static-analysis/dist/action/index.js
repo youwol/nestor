@@ -3939,6 +3939,29 @@ exports["default"] = _default;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -3953,7 +3976,7 @@ exports.run = void 0;
 const core_1 = __nccwpck_require__(186);
 const exec_1 = __nccwpck_require__(514);
 const io_1 = __nccwpck_require__(436);
-const mainBranchPath = '.py-youwol_main';
+const fs = __importStar(__nccwpck_require__(147));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const pathPyYouwolSources = process.env['PY_YOUWOL_SOURCES'];
@@ -3963,6 +3986,13 @@ function run() {
         else {
             process.chdir(pathPyYouwolSources);
         }
+        const targetBranchPath = (0, core_1.getInput)('targetBranchPath');
+        if (targetBranchPath === '') {
+            throw Error('Missing input targetBranchPath');
+        }
+        if (!fs.existsSync(targetBranchPath)) {
+            throw Error(`No target branch working tree at ${targetBranchPath}`);
+        }
         const skips = (0, core_1.getInput)('skip')
             .split(' ')
             .map((skip) => skip.trim());
@@ -3970,7 +4000,7 @@ function run() {
             (0, core_1.debug)('Starting action');
             const title = 'Static Analysis';
             const results = [
-                yield runCheck('version_monotony', checkVersionMonotony, skips),
+                yield runCheck('version_monotony', getCheckVersionMonotony(targetBranchPath), skips),
                 yield runCheck('imports', checkISort, skips),
                 yield runCheck('formatting', checkBlack, skips),
                 yield runCheck('pep8', checkPyCodeStyle, skips),
@@ -4178,19 +4208,22 @@ function checkAudit(title) {
         return 'ok';
     });
 }
-function checkVersionMonotony(title) {
+function getCheckVersionMonotony(targetBranchPath) {
+    return (title) => checkVersionMonotony(targetBranchPath, title);
+}
+function checkVersionMonotony(targetBranchPath, title) {
     return __awaiter(this, void 0, void 0, function* () {
         let output = '';
         function stdline(line) {
             output += line;
         }
-        const result_main = yield (0, exec_1.exec)('python3', [`${process.cwd()}/version_management.py`, 'get_current'], { cwd: mainBranchPath, listeners: { stdline } });
-        if (result_main !== 0) {
-            (0, core_1.error)('Failed to get version of main branch', { title });
+        const result_target = yield (0, exec_1.exec)('python3', [`${process.cwd()}/version_management.py`, 'get_current'], { cwd: targetBranchPath, listeners: { stdline } });
+        if (result_target !== 0) {
+            (0, core_1.error)('Failed to get version of target branch', { title });
             return 'failure';
         }
-        yield (0, io_1.rmRF)(mainBranchPath);
-        const mainVersion = output.trim();
+        yield (0, io_1.rmRF)(targetBranchPath);
+        const targetVersion = output.trim();
         output = '';
         const result_current = yield (0, exec_1.exec)('python3', ['version_management.py', 'get_current'], { listeners: { stdline } });
         if (result_current !== 0) {
@@ -4198,11 +4231,11 @@ function checkVersionMonotony(title) {
             return 'failure';
         }
         const currentVersion = output.trim();
-        (0, core_1.notice)(`Branch version is ${currentVersion}, main branch version is ${mainVersion}`, { title });
+        (0, core_1.notice)(`Branch version is ${currentVersion}, target branch version is ${targetVersion}`, { title });
         const result_check = yield (0, exec_1.exec)('python3', [
             'version_management.py',
             'check',
-            mainVersion,
+            targetVersion,
         ]);
         if (result_check !== 0) {
             (0, core_1.error)('Failed to get current version', { title });
