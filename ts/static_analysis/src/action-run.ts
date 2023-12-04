@@ -305,7 +305,7 @@ async function check_version_wip(): Promise<CheckStatus> {
             return 'failure'
         }
         if (!semVer.prerelease.some((v) => v === 'wip')) {
-            console.error(
+            error(
                 `package.json version '${semVer.raw}' does not have '-wip' prerelease`,
             )
             return 'failure'
