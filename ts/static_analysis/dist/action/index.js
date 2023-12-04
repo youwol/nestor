@@ -7471,7 +7471,7 @@ function check_version_wip() {
                 return 'failure';
             }
             if (!semVer.prerelease.some((v) => v === 'wip')) {
-                console.error(`package.json version '${semVer.raw}' does not have '-wip' prerelease`);
+                (0, core_1.error)(`package.json version '${semVer.raw}' does not have '-wip' prerelease`);
                 return 'failure';
             }
             (0, core_1.info)(`version is ${semVer.raw}`);
