@@ -23,6 +23,7 @@ export async function run(): Promise<void> {
     } else {
         process.chdir(pathPyYouwolSources)
     }
+
     const targetBranchPath = getInput('targetBranchPath')
     if (targetBranchPath === '') {
         throw Error('Missing input targetBranchPath')
@@ -30,9 +31,17 @@ export async function run(): Promise<void> {
     if (!fs.existsSync(targetBranchPath)) {
         throw Error(`No target branch working tree at ${targetBranchPath}`)
     }
+
+    const requirementsPathInput = getInput('requirementsPath')
+    const requirementsPath =
+        requirementsPathInput !== ''
+            ? requirementsPathInput
+            : 'requirements.txt'
+
     const skips = getInput('skip')
         .split(' ')
         .map((skip) => skip.trim())
+
     try {
         debug('Starting action')
         const title = 'Static Analysis'
@@ -46,7 +55,7 @@ export async function run(): Promise<void> {
             await runCheck('imports', checkISort, skips),
             await runCheck('formatting', checkBlack, skips),
             await runCheck('pep8', checkPyCodeStyle, skips),
-            await runCheck('audit', checkAudit, skips),
+            await runCheck('audit', getCheckAudit(requirementsPath), skips),
             await runCheck('pylint', checkPyLint, skips),
             await checkGitCleanness(skips),
         ]
@@ -280,7 +289,16 @@ function isAuditOutput(v: unknown): v is AuditOutput {
     return typeof v === 'object' && v !== null && 'dependencies' in v
 }
 
-async function checkAudit(title: string): Promise<CheckStatus> {
+function getCheckAudit(
+    requirementPath: string,
+): (title: string) => Promise<CheckStatus> {
+    return (title: string) => checkAudit(requirementPath, title)
+}
+
+async function checkAudit(
+    requirementPath: string,
+    title: string,
+): Promise<CheckStatus> {
     function stdline(line: string) {
         try {
             const json = JSON.parse(line)
@@ -309,7 +327,7 @@ async function checkAudit(title: string): Promise<CheckStatus> {
         [
             '--format=json',
             '--require-hashes',
-            '--requirement=requirements-dev.txt',
+            `--requirement=${requirementPath}`,
         ],
         {
             ignoreReturnCode: true,

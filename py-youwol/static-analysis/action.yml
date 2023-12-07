@@ -11,6 +11,10 @@ inputs:
     description: |
       list of steps to skip : dep_manager, cleanness, pep8, audit, version_monotony
     default: ''
+  requirementPath:
+    required: false
+    description: |
+      path to the requirements.txt file to audit. Default to `requirements.txt`
 runs:
   using: node16
   main: 'dist/action/index.js'

@@ -3993,6 +3993,10 @@ function run() {
         if (!fs.existsSync(targetBranchPath)) {
             throw Error(`No target branch working tree at ${targetBranchPath}`);
         }
+        const requirementsPathInput = (0, core_1.getInput)('requirementsPath');
+        const requirementsPath = requirementsPathInput !== ''
+            ? requirementsPathInput
+            : 'requirements.txt';
         const skips = (0, core_1.getInput)('skip')
             .split(' ')
             .map((skip) => skip.trim());
@@ -4004,7 +4008,7 @@ function run() {
                 yield runCheck('imports', checkISort, skips),
                 yield runCheck('formatting', checkBlack, skips),
                 yield runCheck('pep8', checkPyCodeStyle, skips),
-                yield runCheck('audit', checkAudit, skips),
+                yield runCheck('audit', getCheckAudit(requirementsPath), skips),
                 yield runCheck('pylint', checkPyLint, skips),
                 yield checkGitCleanness(skips),
             ];
@@ -4177,7 +4181,10 @@ function checkBlack(title) {
 function isAuditOutput(v) {
     return typeof v === 'object' && v !== null && 'dependencies' in v;
 }
-function checkAudit(title) {
+function getCheckAudit(requirementPath) {
+    return (title) => checkAudit(requirementPath, title);
+}
+function checkAudit(requirementPath, title) {
     return __awaiter(this, void 0, void 0, function* () {
         function stdline(line) {
             try {
@@ -4196,7 +4203,7 @@ function checkAudit(title) {
         const result = yield (0, exec_1.exec)('pip-audit', [
             '--format=json',
             '--require-hashes',
-            '--requirement=requirements-dev.txt',
+            `--requirement=${requirementPath}`,
         ], {
             ignoreReturnCode: true,
             listeners: { stdline },
