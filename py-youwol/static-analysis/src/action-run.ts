@@ -57,6 +57,7 @@ export async function run(): Promise<void> {
             await runCheck('pep8', checkPyCodeStyle, skips),
             await runCheck('audit', getCheckAudit(requirementsPath), skips),
             await runCheck('pylint', checkPyLint, skips),
+            await runCheck('mypy', checkMypy, skips),
             await checkGitCleanness(skips),
         ]
 
@@ -433,5 +434,21 @@ async function checkGitCleanness(skips: string[]): Promise<CheckStatus> {
         return 'failure'
     }
 
+    return 'ok'
+}
+
+async function checkMypy(title: string): Promise<CheckStatus> {
+    let last_line
+    function stdline(line: string) {
+        last_line = line
+    }
+    const result = await exec('mypy', [], {
+        ignoreReturnCode: true,
+        listeners: { stdline },
+    })
+    if (result !== 0) {
+        error(`${last_line}. See logs or run mypy locally.`, { title })
+        return 'failure'
+    }
     return 'ok'
 }

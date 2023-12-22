@@ -4010,6 +4010,7 @@ function run() {
                 yield runCheck('pep8', checkPyCodeStyle, skips),
                 yield runCheck('audit', getCheckAudit(requirementsPath), skips),
                 yield runCheck('pylint', checkPyLint, skips),
+                yield runCheck('mypy', checkMypy, skips),
                 yield checkGitCleanness(skips),
             ];
             if (results.some((result) => result === 'skipped')) {
@@ -4278,6 +4279,23 @@ function checkGitCleanness(skips) {
         }
         if (output.length != 0) {
             output.forEach((line) => (0, core_1.error)(`Unclean git : ${line}`, { title }));
+            return 'failure';
+        }
+        return 'ok';
+    });
+}
+function checkMypy(title) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let last_line;
+        function stdline(line) {
+            last_line = line;
+        }
+        const result = yield (0, exec_1.exec)('mypy', [], {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        });
+        if (result !== 0) {
+            (0, core_1.error)(`${last_line}. See logs or run mypy locally.`, { title });
             return 'failure';
         }
         return 'ok';
