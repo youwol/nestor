@@ -62,7 +62,7 @@ runs:
       id: setup_node
       uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: '20'
         cache: 'yarn'
         cache-dependency-path: ${{ steps.setup_action.outputs.lockFile }}
 

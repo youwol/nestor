@@ -8,5 +8,5 @@ inputs:
       Run test coverage
     default: 'false'
 runs:
-  using: node16
+  using: node20
   main: 'dist/action/index.js'

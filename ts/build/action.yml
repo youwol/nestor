@@ -8,5 +8,5 @@ inputs:
       list of steps to skip : autogen, build, doc, cleanness
     default: ''
 runs:
-  using: node16
+  using: node20
   main: 'dist/action/index.js'

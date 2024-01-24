@@ -2,5 +2,5 @@ name: Python Combine Coverages
 description: Combine Coverages of several py-youwol runs
 author: jdecharne@youwol.com
 runs:
-  using: node16
+  using: node20
   main: 'dist/action/index.js'

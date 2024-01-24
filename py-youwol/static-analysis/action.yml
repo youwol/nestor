@@ -16,5 +16,5 @@ inputs:
     description: |
       path to the requirements.txt file to audit. Default to `requirements.txt`
 runs:
-  using: node16
+  using: node20
   main: 'dist/action/index.js'
