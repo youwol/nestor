@@ -3,14 +3,18 @@ import {
     endGroup,
     error,
     getInput,
+    info,
     notice,
     setFailed,
     startGroup,
     warning,
 } from '@actions/core'
 import { exec } from '@actions/exec'
+import { context } from '@actions/github'
+import { PullRequest } from '@octokit/webhooks-types' // eslint-disable-line import/no-unresolved -- So nice to sse that after all these years, MicroSoft owned products are note able to work together …
 import { rmRF } from '@actions/io'
 import * as fs from 'fs'
+import { glob } from 'glob'
 
 export type CheckStatus = 'ok' | 'failure' | 'skipped'
 
@@ -44,6 +48,11 @@ export async function run(): Promise<void> {
 
     try {
         debug('Starting action')
+        if (context.eventName === 'pulls') {
+            const pullPayload = context.payload as PullRequest
+            info(`in pull request ${pullPayload.number}`)
+        }
+        const files: string[] | undefined = undefined
         const title = 'Static Analysis'
 
         const results = [
@@ -58,6 +67,7 @@ export async function run(): Promise<void> {
             await runCheck('audit', getCheckAudit(requirementsPath), skips),
             await runCheck('pylint', checkPyLint, skips),
             await runCheck('mypy', checkMypy, skips),
+            await runCheck('pyupgrade', await getCheckPyUpgrade(files), skips),
             await checkGitCleanness(skips),
         ]
 
@@ -439,9 +449,11 @@ async function checkGitCleanness(skips: string[]): Promise<CheckStatus> {
 
 async function checkMypy(title: string): Promise<CheckStatus> {
     let last_line
+
     function stdline(line: string) {
         last_line = line
     }
+
     const result = await exec('mypy', [], {
         ignoreReturnCode: true,
         listeners: { stdline },
@@ -451,4 +463,62 @@ async function checkMypy(title: string): Promise<CheckStatus> {
         return 'failure'
     }
     return 'ok'
+}
+
+async function getCheckPyUpgrade(
+    files: string[] | undefined,
+    failOnDetection = false,
+) {
+    const pythonFiles = files
+        ? files.filter((file) => file.endsWith('.py'))
+        : await glob('src/**/*.py')
+    return (title: string) =>
+        checkPyUpgrade(pythonFiles, title, failOnDetection)
+}
+
+async function checkPyUpgrade(
+    paths: string[],
+    title: string,
+    failOnDetection = false,
+): Promise<CheckStatus> {
+    const result = await exec('pipx', ['install', 'pyupgrade'], {
+        ignoreReturnCode: true,
+    })
+    if (result !== 0) {
+        error(`\`pipx install pyupgrade\` exit with non-zero code '${result}'`)
+        return 'failure'
+    }
+    const resultOnDetection = failOnDetection ? 'failure' : 'ok'
+    const notifyOnDetection = failOnDetection ? error : warning
+
+    async function checkPyUpgradeFile(file: string) {
+        const result = await exec('pyupgrade', ['--py310-plus', file], {
+            ignoreReturnCode: true,
+        })
+        if (result !== 0) {
+            notifyOnDetection(
+                `Code can be upgraded for Python 3.10+. Run \`pyupgrade --py310-plus ${file}\` to update this file.`,
+                {
+                    title,
+                    file,
+                },
+            )
+            return false
+        }
+        return true
+    }
+
+    const results = await Promise.all(
+        paths.map((path) => checkPyUpgradeFile(path)),
+    )
+    const resultRestore = await exec('git', ['restore', 'src'], {
+        ignoreReturnCode: true,
+    })
+    if (resultRestore !== 0) {
+        error(
+            `\`git restore src\` exit with non-zore code '${resultRestore}'. \`Failed to restore src directory !`,
+            { title },
+        )
+    }
+    return results.every((v) => v) ? 'ok' : resultOnDetection
 }
