@@ -31500,7 +31500,7 @@ function getCheckPyUpgrade(files, failOnDetection = false) {
 }
 function checkPyUpgrade(paths, title, failOnDetection = false) {
     return __awaiter(this, void 0, void 0, function* () {
-        const result = yield (0, exec_1.exec)('pipx', ['install', 'pyupgrade'], {
+        const result = yield (0, exec_1.exec)('pipx', ['install', 'pyupgrade', '--python', 'python3.12'], {
             ignoreReturnCode: true,
         });
         if (result !== 0) {

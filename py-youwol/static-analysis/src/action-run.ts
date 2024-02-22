@@ -481,9 +481,13 @@ async function checkPyUpgrade(
     title: string,
     failOnDetection = false,
 ): Promise<CheckStatus> {
-    const result = await exec('pipx', ['install', 'pyupgrade'], {
-        ignoreReturnCode: true,
-    })
+    const result = await exec(
+        'pipx',
+        ['install', 'pyupgrade', '--python', 'python3.12'],
+        {
+            ignoreReturnCode: true,
+        },
+    )
     if (result !== 0) {
         error(`\`pipx install pyupgrade\` exit with non-zero code '${result}'`)
         return 'failure'
