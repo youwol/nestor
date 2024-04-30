@@ -1,4 +1,4 @@
-import { create } from '@actions/artifact'
+import client from '@actions/artifact'
 import { endGroup, error, setFailed, startGroup, warning } from '@actions/core'
 import { exec } from '@actions/exec'
 import * as glob from '@actions/glob'
@@ -69,14 +69,13 @@ export async function run() {
 
 async function uploadFiles(state: State, artifacts: string[]): Promise<void> {
     const title = 'Py-youwol execution artifacts'
-    const artifactClient = create()
     artifacts
         .filter((path) => !fs.existsSync(path))
         .forEach((path) => warning(`File not found: ${path}`, { title }))
     const finalArtifacts = artifacts.filter((path) => fs.existsSync(path))
 
     try {
-        await artifactClient.uploadArtifact(
+        await client.uploadArtifact(
             state.name,
             finalArtifacts,
             state.workingDir,

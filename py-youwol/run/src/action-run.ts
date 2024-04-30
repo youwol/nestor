@@ -1,4 +1,3 @@
-import { sleep } from '@actions/artifact/lib/internal/utils'
 import {
     debug,
     endGroup,
@@ -157,7 +156,7 @@ async function waitPyYouwol(): Promise<boolean> {
         } catch (err) {
             info(`failed to contact endpoint : ${err}`)
         }
-        await sleep(1000)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
     }
     endGroup()
 
