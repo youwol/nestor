@@ -28,18 +28,18 @@
         "glob": "^10.3.10"
     },
     "devDependencies": {
-        "@types/node": "^20.11.16",
+        "@types/node": "^20.12.7",
         "@vercel/ncc": "^0.38.1",
-        "eslint-plugin-github": "^4.10.1",
+        "@youwol/prettier-config": "^1.2.1",
+        "@youwol/eslint-config": "^1.2.1",
+        "@youwol/tsconfig": "^1.2.1",
+        "@youwol/jest-preset": "^1.2.1",
+        "eslint": "^8.57.0",
+        "eslint-plugin-github": "^4.10.2",
         "js-yaml": "^4.1.0",
-        "typescript": "^5.3.3",
-        "@youwol/prettier-config": "^1.2.0",
-        "@youwol/eslint-config": "^1.2.0",
-        "@youwol/tsconfig": "^1.2.0",
-        "@youwol/jest-preset": "^1.2.0",
         "ts-node": "^10.9.2",
-        "eslint": "^8.56.0",
-        "tsx": "^4.7.0"
+        "tsx": "^4.7.3",
+        "typescript": "^5.4.5"
     },
     "prettier": "@youwol/prettier-config",
     "eslintConfig": {

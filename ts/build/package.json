@@ -24,15 +24,18 @@
         "@actions/exec": "^1.1.1"
     },
     "devDependencies": {
-        "@types/node": "^18.16.3",
-        "@vercel/ncc": "^0.36.1",
-        "eslint-plugin-github": "^4.7.0",
+        "@types/node": "^20.12.7",
+        "@vercel/ncc": "^0.38.1",
+        "@youwol/prettier-config": "^1.2.1",
+        "@youwol/eslint-config": "^1.2.1",
+        "@youwol/tsconfig": "^1.2.1",
+        "@youwol/jest-preset": "^1.2.1",
+        "eslint": "^8.57.0",
+        "eslint-plugin-github": "^4.10.2",
         "js-yaml": "^4.1.0",
-        "typescript": "^5.0.4",
-        "@youwol/prettier-config": "^0.1.0",
-        "@youwol/eslint-config": "^0.1.0",
-        "@youwol/tsconfig": "^0.1.0",
-        "@youwol/jest-preset": "^0.1.0"
+        "ts-node": "^10.9.2",
+        "tsx": "^4.7.3",
+        "typescript": "^5.4.5"
     },
     "prettier": "@youwol/prettier-config",
     "eslintConfig": {
