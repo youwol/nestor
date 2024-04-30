@@ -1,14 +1,13 @@
-import { create } from '@actions/artifact'
 import { error } from '@actions/core'
 import { exec } from '@actions/exec'
 import fs from 'fs'
 import { State } from './state'
+import client from '@actions/artifact'
 
 export async function uploadLogsOnFailure(state: State) {
     if (fs.existsSync(state.logsPath)) {
-        const artifactClient = create()
         try {
-            await artifactClient.uploadArtifact(
+            await client.uploadArtifact(
                 `${state.name}_failure`,
                 [state.logsPath],
                 state.workingDir,
