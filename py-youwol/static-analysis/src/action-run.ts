@@ -333,10 +333,11 @@ async function checkAudit(
         }
     }
 
-    const result = await exec(
+    const result_pypi = await exec(
         'pip-audit',
         [
             '--format=json',
+            '--vulnerability-service=pypi',
             '--require-hashes',
             `--requirement=${requirementPath}`,
         ],
@@ -346,8 +347,33 @@ async function checkAudit(
         },
     )
 
-    if (result !== 0) {
-        error(`Audit return non zero exit code ${result}`, { title })
+    if (result_pypi !== 0) {
+        error(
+            `Audit with pypi service return non zero exit code ${result_pypi}`,
+            { title },
+        )
+        return 'failure'
+    }
+
+    const result_osv = await exec(
+        'pip-audit',
+        [
+            '--format=json',
+            '--vulnerability-service=osv',
+            '--require-hashes',
+            `--requirement=${requirementPath}`,
+        ],
+        {
+            ignoreReturnCode: true,
+            listeners: { stdline },
+        },
+    )
+
+    if (result_osv !== 0) {
+        error(
+            `Audit with OSV service return non zero exit code ${result_osv}`,
+            { title },
+        )
         return 'failure'
     }
 
